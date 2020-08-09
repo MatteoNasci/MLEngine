@@ -17,32 +17,10 @@ add_subdirectory(MLEngine)
 add_executable(MLEngineTest ${MLEngineTest_SOURCE_ROOT}main.cpp)
 
 target_include_directories(MLEngineTest PUBLIC "${MLEngineTest_INCLUDE_ROOT}" "${MLEngine_INCLUDE_ROOT}")
-target_link_libraries(MLEngineTest PUBLIC MLEngine GLAD opengl32)
+target_link_libraries(MLEngineTest PUBLIC MLEngine)
 
-
-# Copy dlls
+#Copy libraries
 if(WIN32)
-    #add_custom_command(
-    #    TARGET MLEngine POST_BUILD
-    #    COMMAND ${CMAKE_COMMAND} -E remove_directory
-    #    "$<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/lib/release>"
-    #    "$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/lib/debug>"
-    #)
-
-    #add_custom_command(
-    #    TARGET MLEngine POST_BUILD
-    #    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    #    $<TARGET_FILE_DIR:holey_scanner>
-    #    "$<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/lib/release>"
-    #    "$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/lib/debug>"
-    #)
-
-	#add_custom_command(TARGET MLEngine POST_BUILD
-	#	COMMAND ${CMAKE_COMMAND} -E copy_directory
-    #    "$<$<CONFIG:Release>:${CMAKE_CURRENT_SOURCE_DIR}/Release/"
-    #    "$<$<CONFIG:Debug>:${CMAKE_CURRENT_SOURCE_DIR}/Debug/"
-	#	$<TARGET_FILE_DIR:MLEngine>)
-
     add_custom_command(TARGET MLEngineTest POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/build/MLEngine/$<CONFIGURATION>"
