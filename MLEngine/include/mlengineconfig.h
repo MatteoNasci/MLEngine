@@ -1,0 +1,7 @@
+#ifndef MLENGINECONFIG_H_IN
+#define MLENGINECONFIG_H_IN
+
+#define MLEngine_VERSION_MAJOR 1
+#define MLEngine_VERSION_MINOR 0
+
+#endif //MLENGINECONFIG_H_IN

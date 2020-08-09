@@ -1,6 +1,12 @@
 # Prerequisites
 *.d
 
+#VisualStudio Code
+.vscode/
+
+#Build
+build/
+
 # Compiled Object files
 *.slo
 *.lo
