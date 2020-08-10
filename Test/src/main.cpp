@@ -1,5 +1,6 @@
 #include <mlengineconfig.h>
 #include <test.h>
+#include <engine.h>
 
 #include <exception>
 #include <iostream>
@@ -7,7 +8,7 @@ int main(int argc, char** argv){
     if (argc < 2) {
     // report version
     try{
-        std::cout << "Init glfw: " << mle::Test().init() << std::endl;
+        std::cout << "Init glfw: " << mle::Engine::instance().init() << std::endl;
     }
     catch(std::exception e){
         std::cout << "Exception: " << e.what() << std::endl;
