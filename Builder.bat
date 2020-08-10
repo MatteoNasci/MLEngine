@@ -4,4 +4,6 @@ cd build
 cmake ../
 cmake --build . --config release
 cmake --build . --config debug
-START Release/MLEngineTest.exe
+START UnitTesting/Release/MLEngineUnitTesting.exe
+START UnitTesting/Debug/MLEngineUnitTesting.exe
+START Test/Release/MLEngineTest.exe

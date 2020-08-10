@@ -37,3 +37,11 @@ add_library(MLEngine SHARED
 target_link_libraries(MLEngine PRIVATE ${MLEngine_LIBS})
 target_compile_definitions(MLEngine PRIVATE MLENGINE_LIBRARY)
 target_include_directories(MLEngine PRIVATE "${MLEngine_INCLUDE_ROOT}" "${GLFW_INCLUDE_ROOT}")
+
+#Copy libraries
+if(WIN32)
+    add_custom_command(TARGET MLEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/build/MLEngine/$<CONFIGURATION>"
+        "${CMAKE_SOURCE_DIR}/build/MLEngineLibs/$<CONFIGURATION>")
+endif()
