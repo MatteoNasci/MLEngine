@@ -29,5 +29,7 @@ int main(int argc, char** argv){
 void getCurrentTime(char* output, const rsize_t size){
     const auto current_time = std::chrono::system_clock::now();
     const auto current_time_transformed = std::chrono::system_clock::to_time_t(current_time);
-    ctime_s(output, size, &current_time_transformed);
+    if(ctime_s(output, size, &current_time_transformed)){
+        std::strcpy(output, "No valid time found!\0");
+    }
 }
