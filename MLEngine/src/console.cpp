@@ -9,7 +9,7 @@
 
 using namespace mle;
 
-Console::Console(const std::string& loggingFileName) : m_commands(), m_loggingFileName(loggingFileName), m_minimumLogClassificationAccepted(LogClassification::Normal){
+Console::Console(const std::string& loggingFileName) : m_commands(), m_loggingFileName(loggingFileName), /*m_logToFileTask(),*/ m_minimumLogClassificationAccepted(LogClassification::Normal){
     std::ofstream log_file;
     log_file.open(m_loggingFileName, std::ios::out | std::ios::trunc);
     if(log_file.is_open()){
@@ -111,7 +111,7 @@ bool Console::separateCommand(const std::string& fullCommand, std::string& out_c
         out_input = "";
     }
     
-    return true;
+    return out_command.size();
 }
 bool Console::isLogCommand(const std::string& log) const{
     if(!log.size()){

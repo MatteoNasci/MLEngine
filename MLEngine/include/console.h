@@ -6,6 +6,7 @@
 #include <functional>
 #include <vector>
 #include <map>
+#include <future>
 
 namespace mle
 {
@@ -13,8 +14,8 @@ enum class LogClassification{
     Normal = 0,
     Warning,
     Error,
-    Fatal,
     Critical,
+    Fatal,
     Command,
     Info,
 };
@@ -51,6 +52,7 @@ public:
 private:
     std::map<std::string, std::function<void(const std::string& input)>> m_commands;
     std::string m_loggingFileName;
+    //std::future<bool(std::string, std::vector<std::string>&&)> m_logToFileTask; //use TimeManager
     LogClassification m_minimumLogClassificationAccepted;
 };
 }
