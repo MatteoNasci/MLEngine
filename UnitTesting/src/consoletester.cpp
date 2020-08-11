@@ -1,16 +1,18 @@
 #include <gmock/gmock.h>
 
 #include <console.h>
-
+#include <timemanager.h>
 #include <iostream>
 
 class ConsoleTest : public ::testing::Test
 {
 protected:
     mle::Console* m_console;
+    mle::TimeManager* m_timeManager;
     virtual void SetUp()
     {      
-        m_console = new mle::Console("Test.txt");
+        m_timeManager = new mle::TimeManager();
+        m_console = new mle::Console("Test.txt", *m_timeManager);
         m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Warning);
     }
 

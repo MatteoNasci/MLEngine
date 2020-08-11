@@ -9,14 +9,21 @@
 
 using namespace mle;
 
-Console::Console(const std::string& loggingFileName) : m_commands(), m_loggingFileName(loggingFileName), /*m_logToFileTask(),*/ m_minimumLogClassificationAccepted(LogClassification::Normal){
+Console::Console(const std::string& loggingFileName, TimeManager& timeManager) :
+    m_commands(), 
+    m_loggingFileName(loggingFileName),
+    m_minimumLogClassificationAccepted(LogClassification::Normal),
+    m_timeManager(timeManager),
+    m_logsToFile(),
+    m_logToFileTask()
+{
     std::ofstream log_file;
     log_file.open(m_loggingFileName, std::ios::out | std::ios::trunc);
     if(log_file.is_open()){
-        const size_t time_size = 100;
+        const size_t time_size = 200;
         char time[time_size];
         EngineTime::now(time, time_size);
-        log_file << "Logging started at " << time << std::endl;
+        log_file << "Logging started at " << time;
         log_file.close();
     }
 }
@@ -24,10 +31,19 @@ Console::~Console(){
     
 }
 void Console::setMinimumLogClassificationToProcess(const LogClassification minimum){
+    m_classificationMutex.lock();
     m_minimumLogClassificationAccepted = minimum;
+    m_classificationMutex.unlock();
 }
-LogClassification Console::getMinimumLogClassificationToProcess() const{
-    return m_minimumLogClassificationAccepted;
+LogClassification Console::getMinimumLogClassificationToProcess(){
+    m_classificationMutex.lock();
+    const auto result = m_minimumLogClassificationAccepted;
+    m_classificationMutex.unlock();
+
+    return result;
+}
+std::string Console::logFilename() const{
+    return m_loggingFileName;
 }
 bool Console::addCommand(const std::string& command_key, std::function<void(const std::string& input)> command){
     if(m_commands.count(command_key)){
@@ -71,14 +87,54 @@ bool Console::logToFile(const std::string& msg, const LogClassification classifi
         return false;
     }
 
+    m_logsToFileMutex.lock();
+    m_logsToFile.push_back(msg);
+    if(!m_logToFileTask.valid()){
+        createAsyncTask();
+    }
+    m_logsToFileMutex.unlock();
+
+    return true;
+}
+void Console::createAsyncTask(){
+    m_logToFileTask = std::async(std::launch::async, &Console::asyncWriteToFile, logFilename(), std::move(m_logsToFile));
+    m_logsToFile.clear();
+    createTaskTimer();
+}
+void Console::createTaskTimer(){
+    m_timeManager.addTimer(0.3, [this](){if(this != nullptr){this->checkAsyncTask();}});
+}
+bool Console::asyncWriteToFile(const std::string& filename, std::vector<std::string>&& logs){
     std::ofstream log_file;
-    log_file.open(m_loggingFileName, std::ios::out | std::ios::app);
+    log_file.open(filename, std::ios::out | std::ios::app);
     if(log_file.is_open()){
-        log_file << msg << std::endl;
+        const size_t size = logs.size();
+
+        for(size_t i = 0; i < size; ++i){
+            log_file << logs[i] << std::endl;
+        }
+        
         log_file.close();
         return true;
     }
     return false;
+}
+void Console::checkAsyncTask(){
+    m_logsToFileMutex.lock();
+    const bool isTaskOver = (m_logToFileTask.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready);
+    m_logsToFileMutex.unlock();
+
+    if(!isTaskOver){
+        createTaskTimer();
+        return;
+    }
+
+    m_logsToFileMutex.lock();
+    const bool result = m_logToFileTask.get();
+    if(m_logsToFile.size()){
+        createAsyncTask();
+    }
+    m_logsToFileMutex.unlock();
 }
 bool Console::command(const std::string& msg, const std::string& input){
     const bool command_found = m_commands.count(msg);
@@ -92,7 +148,7 @@ bool Console::command(const std::string& msg, const std::string& input){
     return command_found;
 }
 
-bool Console::isClassificationProcessable(const LogClassification toTest) const{
+bool Console::isClassificationProcessable(const LogClassification toTest){
     return toTest >= getMinimumLogClassificationToProcess();
 }
 bool Console::separateCommand(const std::string& fullCommand, std::string& out_command, std::string& out_input) const{

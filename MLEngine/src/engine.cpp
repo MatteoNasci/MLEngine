@@ -3,10 +3,15 @@
 #include <GLFW/glfw3.h>
 using namespace mle;
 
-Engine::Engine() {
+Engine::Engine() : m_mainTimeManager(), m_mainConsole("Console.txt", timeManager()){
 
 }
-
+Console& Engine::console(){
+    return m_mainConsole;
+}
+TimeManager& Engine::timeManager(){
+    return m_mainTimeManager;
+}
 bool Engine::init(){
     GLFWwindow* window;
 
