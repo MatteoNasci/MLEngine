@@ -5,7 +5,7 @@
 
 #include <timerhandle.h>
 
-#include <queue>
+#include <set>
 #include <vector>
 
 namespace mle{
@@ -20,17 +20,12 @@ public:
     double getRemainingTime(const double timeout) const;
     double getRemainingTimeForNextTimer() const;
     double getExpectedTimeout(const double duration) const;
-    template<typename T>
-    void addTimer(const double duration, T onTimeout){
-        std::function<void(void)> func = onTimeout;
-        pushTimer(duration, func);
-    }
+    void addTimer(const double duration, std::function<void(void)> onTimeout);
 private:
     void checkTimers();
-    void pushTimer(const double duration, std::function<void(void)> onTimeout);
 private:
     double m_time;
-    std::priority_queue<TimerHandle, std::vector<TimerHandle>, std::greater<TimerHandle>> m_timers;
+    std::multiset<TimerHandle> m_timers;
 };
 };
 #endif

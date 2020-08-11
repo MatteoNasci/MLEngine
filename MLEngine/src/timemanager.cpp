@@ -1,7 +1,6 @@
 #include <timemanager.h>
 
 #include <limits>
-#include <iostream>
 
 using namespace mle;
 TimeManager::TimeManager() : m_time(0.0), m_timers(){
@@ -20,7 +19,7 @@ double TimeManager::timePassed() const{
 double TimeManager::getRemainingTime(const double timeout) const{
     return timeout - timePassed();
 }
-void TimeManager::pushTimer(const double duration, std::function<void(void)> onTimeout){
+void TimeManager::addTimer(const double duration, std::function<void(void)> onTimeout){
     m_timers.emplace(getExpectedTimeout(duration), onTimeout);
 }
 double TimeManager::getExpectedTimeout(const double duration) const{
@@ -33,17 +32,17 @@ double TimeManager::getRemainingTimeForNextTimer() const{
     if(m_timers.empty()){
         return std::numeric_limits<double>::max();
     }
-    return getRemainingTime(m_timers.top().triggerAt);
+    return getRemainingTime(m_timers.cbegin()->triggerAt);
 }
 void TimeManager::checkTimers(){
     while(getRemainingTimeForNextTimer() <= 0.0){
-        const TimerHandle& timer = m_timers.top();
+        const auto& timer_it = m_timers.cbegin();
+        const auto& timer = *timer_it;
 
-        m_timers.pop();
-
-        std::cout << "Is timeout valid? " << (timer.onTimeout ? "Yes" : "No") << std::endl;
         if(timer.onTimeout){
             timer.onTimeout();
         }
+
+        m_timers.erase(timer_it);
     }
 }
