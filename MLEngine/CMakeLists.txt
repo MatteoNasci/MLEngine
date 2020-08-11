@@ -16,6 +16,8 @@ set(GLFW_ROOT ${MLEngine_EXT_ROOT}/Glfw/)
 set(GLFW_INCLUDE_ROOT ${GLFW_ROOT}/include/)
 set(GLFW_LIBS_ROOT ${GLFW_ROOT}/build/src/)
 
+set(BUILD_MLENGINE_STATIC TRUE)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/mlengineconfig.h.in ${MLEngine_INCLUDE_ROOT}/mlengineconfig.h)
 
 set(MLEngine_LIBS opengl32)
@@ -25,9 +27,16 @@ file(GLOB_RECURSE SOURCE_FILES
 	${MLEngine_SOURCE_ROOT}/*.c
 	${MLEngine_SOURCE_ROOT}/*.cpp)
 
+if(BUILD_MLENGINE_STATIC)
+add_library(MLEngine STATIC 
+    ${SOURCE_FILES}
+    )
+target_compile_definitions(MLEngine PUBLIC MLENGINE_STATIC)
+else()
 add_library(MLEngine SHARED 
     ${SOURCE_FILES}
     )
+endif()
 
 target_link_libraries(MLEngine PRIVATE general ${MLEngine_LIBS})
 target_link_libraries(MLEngine PRIVATE debug ${GLFW_LIBS_ROOT}/Debug/glfw3.lib)

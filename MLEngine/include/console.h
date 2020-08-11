@@ -26,6 +26,8 @@ enum class LogClassification{
 
 class MLENGINE_SHARED_EXPORT Console{
 public:
+    static const mle::LogClassification HighestClassificationPriority;
+
     Console(const std::string& loggingFileName, TimeManager& timeManager);
     Console(const Console& rhs) = delete;
     Console(Console&& rhs) = delete;
@@ -34,7 +36,7 @@ public:
     Console& operator=(const Console& rhs) = delete;
     Console& operator=(Console&& rhs) = delete;   
 
-    void setMinimumLogClassificationToProcess(const LogClassification minimum);
+    void setMinimumLogClassificationToProcess(LogClassification minimum);
     LogClassification getMinimumLogClassificationToProcess();
 
     bool addCommand(const std::string& command_key, std::function<void(const std::string& input)> command);
@@ -52,8 +54,10 @@ public:
     bool isClassificationProcessable(const LogClassification toTest);
 
     bool separateCommand(const std::string& fullCommand, std::string& out_command, std::string& out_input) const;
-    bool isLogCommand(const std::string& log) const;
+    bool isMsgCommand(const std::string& msg) const;
     std::string logFilename() const;
+
+    static mle::LogClassification getHighestPriorityClassification();
 private:
     void createAsyncTask();
     void checkAsyncTask();

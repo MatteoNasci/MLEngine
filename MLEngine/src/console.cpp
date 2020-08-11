@@ -6,6 +6,7 @@
 #include <fstream>
 #include <ios>
 #include <utility>
+#include <chrono>
 
 using namespace mle;
 
@@ -30,7 +31,14 @@ Console::Console(const std::string& loggingFileName, TimeManager& timeManager) :
 Console::~Console(){
     
 }
-void Console::setMinimumLogClassificationToProcess(const LogClassification minimum){
+mle::LogClassification Console::getHighestPriorityClassification(){
+    return mle::LogClassification::Info;
+}
+void Console::setMinimumLogClassificationToProcess(LogClassification minimum){
+    if(minimum > Console::getHighestPriorityClassification()){
+        minimum = Console::getHighestPriorityClassification();
+    }
+
     m_classificationMutex.lock();
     m_minimumLogClassificationAccepted = minimum;
     m_classificationMutex.unlock();
@@ -46,6 +54,9 @@ std::string Console::logFilename() const{
     return m_loggingFileName;
 }
 bool Console::addCommand(const std::string& command_key, std::function<void(const std::string& input)> command){
+    if(!isMsgCommand(command_key)){
+        return false;
+    }
     if(m_commands.count(command_key)){
         return false;
     }
@@ -71,7 +82,7 @@ void Console::getCommandList(std::vector<std::string> out_list) const{
     }
 }
 bool Console::log(const std::string& msg, const LogClassification classification){
-    if(isLogCommand(msg)){
+    if(isMsgCommand(msg)){
         std::string command_key, input;
         if(!separateCommand(msg, command_key, input)){
             return false;
@@ -142,7 +153,13 @@ bool Console::command(const std::string& msg, const std::string& input){
     logToFile(msg + input + (command_found ? "" : " COMMAND_NOT_FOUND"), LogClassification::Command);
 
     if(command_found){
-        m_commands[msg](input);
+        const auto& command = m_commands[msg];
+        if(command){
+            command(input);
+        }else{
+            logToFile("Failed to find a valid function associated with command '" + msg + "'! The command will be removed.", mle::LogClassification::Error);
+            removeCommand(msg);
+        }
     }
 
     return command_found;
@@ -169,9 +186,9 @@ bool Console::separateCommand(const std::string& fullCommand, std::string& out_c
     
     return out_command.size();
 }
-bool Console::isLogCommand(const std::string& log) const{
-    if(!log.size()){
+bool Console::isMsgCommand(const std::string& msg) const{
+    if(!msg.size()){
         return false;
     }
-    return (log[0] == '/');
+    return (msg[0] == '/');
 }

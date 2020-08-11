@@ -10,20 +10,27 @@ void EngineTime::now(char* output, const size_t max_size){
     if(!max_size || output == nullptr){
         return;
     }
+    output[0] = '\0';
 
-    const auto current_time = std::chrono::system_clock::now();
-    const auto current_time_transformed = std::chrono::system_clock::to_time_t(current_time);
-    if(ctime_s(output, max_size, &current_time_transformed)){
-        static const char error_output[] = "No valid time found!";
-        static const size_t error_output_size = (std::strlen(error_output) + 1);
-        if(max_size >= error_output_size){
+    static const size_t min_size = 26;
+    if(max_size >= min_size){
+        const auto current_time_transformed = extractTime(nowPoint());    
+        if(ctime_s(output, max_size, &current_time_transformed)){
+            static const char error_output[] = "No valid time found!";
+            static const size_t error_output_size = (std::strlen(error_output) + 1);
+            if(max_size >= error_output_size){
 #ifdef __STDC_LIB_EXT1__
-            std::strcpy_s(output, error_output_size, error_output);
+                std::strcpy_s(output, error_output_size, error_output);
 #else
-            std::strcpy(output, error_output);
+                std::strcpy(output, error_output);
 #endif
-        }else{
-            output[0] = '\0';
+            }
         }
     }
+}
+time_t EngineTime::extractTime(const std::chrono::system_clock::time_point& timePoint){
+    return std::chrono::system_clock::to_time_t(timePoint);
+}
+std::chrono::system_clock::time_point EngineTime::nowPoint(){
+    return std::chrono::system_clock::now();
 }
