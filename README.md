@@ -1,2 +1,6 @@
 # MLEngine
-Exercise engine
+Simple engine.
+
+Currently using:
+GoogleTest
+Glfw

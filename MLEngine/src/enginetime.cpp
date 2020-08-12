@@ -7,15 +7,17 @@
 
 using namespace mle;
 void EngineTime::now(char* output, const size_t max_size){
+    EngineTime::timeString(EngineTime::extractTime(EngineTime::nowPoint()), output, max_size);
+}
+void EngineTime::timeString(const time_t& time, char* output, const size_t max_size){
     if(!max_size || output == nullptr){
         return;
     }
     output[0] = '\0';
 
     static const size_t min_size = 26;
-    if(max_size >= min_size){
-        const auto current_time_transformed = extractTime(nowPoint());    
-        if(ctime_s(output, max_size, &current_time_transformed)){
+    if(max_size >= min_size){ 
+        if(ctime_s(output, max_size, &time)){
             static const char error_output[] = "No valid time found!";
             static const size_t error_output_size = (std::strlen(error_output) + 1);
             if(max_size >= error_output_size){

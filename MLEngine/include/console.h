@@ -26,8 +26,6 @@ enum class LogClassification{
 
 class MLENGINE_SHARED_EXPORT Console{
 public:
-    static const mle::LogClassification HighestClassificationPriority;
-
     Console(const std::string& loggingFileName, TimeManager& timeManager);
     Console(const Console& rhs) = delete;
     Console(Console&& rhs) = delete;
