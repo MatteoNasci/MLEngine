@@ -3,13 +3,13 @@
 #include <GLFW/glfw3.h>
 using namespace mle;
 
-Engine::Engine() : m_mainTimeManager(), m_mainConsole("Console.txt", timeManager()){
+Engine::Engine() : m_mainTimeManager(), m_mainConsole("Console.txt", timerManager()){
 
 }
 Console& Engine::console(){
     return m_mainConsole;
 }
-TimeManager& Engine::timeManager(){
+TimerManager& Engine::timerManager(){
     return m_mainTimeManager;
 }
 bool Engine::init(){

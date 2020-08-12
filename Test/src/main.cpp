@@ -1,5 +1,6 @@
 #include <mlengineconfig.h>
 #include <engine.h>
+#include <timermanager.h>
 
 #include <exception>
 #include <iostream>
@@ -19,7 +20,7 @@ int main(int argc, char** argv){
         std::cout << "Usage: " << argv[0] << " number" << std::endl;
     }
     while(true){
-        mle::Engine::instance().timeManager().advanceTime(0.01);
+        mle::Engine::instance().timerManager().advanceTime(0.01);
     }
     return 0;
 }

@@ -1,5 +1,5 @@
-#ifndef TIMEMANAGER_H
-#define TIMEMANAGER_H
+#ifndef TIMERMANAGER_H
+#define TIMERMANAGER_H
 
 #include <mlengine_global.h>
 
@@ -9,10 +9,10 @@
 #include <vector>
 
 namespace mle{
-class MLENGINE_SHARED_EXPORT TimeManager{
+class MLENGINE_SHARED_EXPORT TimerManager{
 public:
-    TimeManager();
-    ~TimeManager();
+    TimerManager();
+    ~TimerManager();
     void advanceTime(const double timeToAdd);
     double timePassed() const;
 

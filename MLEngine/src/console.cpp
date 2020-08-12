@@ -10,11 +10,11 @@
 
 using namespace mle;
 
-Console::Console(const std::string& loggingFileName, TimeManager& timeManager) :
+Console::Console(const std::string& loggingFileName, TimerManager& timerManager) :
     m_commands(), 
     m_loggingFileName(loggingFileName),
     m_minimumLogClassificationAccepted(LogClassification::Normal),
-    m_timeManager(timeManager),
+    m_timeManager(timerManager),
     m_logsToFile(),
     m_logToFileTask()
 {
@@ -23,7 +23,7 @@ Console::Console(const std::string& loggingFileName, TimeManager& timeManager) :
     if(log_file.is_open()){
         const size_t time_size = 200;
         char time[time_size];
-        EngineTime::now(time, time_size);
+        EngineTime::nowString(time, time_size);
         log_file << "Logging started at " << time;
         log_file.close();
     }
@@ -148,11 +148,10 @@ void Console::checkAsyncTask(){
     m_logsToFileMutex.unlock();
 }
 bool Console::command(const std::string& msg, const std::string& input){
-    const bool command_found = m_commands.count(msg);
-
-    logToFile(msg + input + (command_found ? "" : " COMMAND_NOT_FOUND"), LogClassification::Command);
+    const bool command_found = m_commands.count(msg);   
 
     if(command_found){
+        logToFile(msg + input, LogClassification::Command);
         const auto& command = m_commands[msg];
         if(command){
             command(input);
@@ -160,6 +159,8 @@ bool Console::command(const std::string& msg, const std::string& input){
             logToFile("Failed to find a valid function associated with command '" + msg + "'! The command will be removed.", mle::LogClassification::Error);
             removeCommand(msg);
         }
+    }else{
+        logToFile("[COMMAND_NOT_FOUND]" + msg + input, LogClassification::Command);
     }
 
     return command_found;

@@ -3,7 +3,7 @@
 
 #include <mlengine_global.h>
 #include <console.h>
-#include <timemanager.h>
+#include <timermanager.h>
 
 namespace mle{
 class MLENGINE_SHARED_EXPORT Engine{
@@ -11,12 +11,12 @@ public:
     bool init();
 
     Console& console();
-    TimeManager& timeManager();
+    TimerManager& timerManager();
 
     static Engine& instance();
 private: Engine();
 private:
-    TimeManager m_mainTimeManager;
+    TimerManager m_mainTimeManager;
     Console m_mainConsole;
 };
 };

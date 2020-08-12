@@ -3,7 +3,7 @@
 
 #include <mlengine_global.h>
 
-#include <timemanager.h>
+#include <timermanager.h>
 
 #include <string>
 #include <functional>
@@ -26,7 +26,7 @@ enum class LogClassification{
 
 class MLENGINE_SHARED_EXPORT Console{
 public:
-    Console(const std::string& loggingFileName, TimeManager& timeManager);
+    Console(const std::string& loggingFileName, TimerManager& timerManager);
     Console(const Console& rhs) = delete;
     Console(Console&& rhs) = delete;
     ~Console();
@@ -67,7 +67,7 @@ private:
     std::string m_loggingFileName;
     std::mutex m_classificationMutex;
     LogClassification m_minimumLogClassificationAccepted;
-    TimeManager& m_timeManager;
+    TimerManager& m_timeManager;
 
     std::mutex m_logsToFileMutex;
     std::vector<std::string> m_logsToFile;

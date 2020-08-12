@@ -1,17 +1,17 @@
 #include <gmock/gmock.h>
 
 #include <console.h>
-#include <timemanager.h>
+#include <timermanager.h>
 #include <iostream>
 
 class ConsoleTest : public ::testing::Test
 {
 protected:
     mle::Console* m_console;
-    mle::TimeManager* m_timeManager;
+    mle::TimerManager* m_timeManager;
     virtual void SetUp()
     {      
-        m_timeManager = new mle::TimeManager();
+        m_timeManager = new mle::TimerManager();
         m_console = new mle::Console("ConsoleTestTest.txt", *m_timeManager);
         m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Warning);
     }
@@ -23,24 +23,24 @@ protected:
 };
 
 TEST_F(ConsoleTest, initConsoleClassification){
-    mle::TimeManager m;  
+    mle::TimerManager m;  
     mle::Console c("", m);  
     EXPECT_EQ(c.getMinimumLogClassificationToProcess(), mle::LogClassification::Normal);          
 }
 TEST_F(ConsoleTest, initConsoleFilename){
-    mle::TimeManager m;  
+    mle::TimerManager m;  
     mle::Console c("ciaomelomelo.txt", m);  
     EXPECT_TRUE(("ciaomelomelo.txt" == c.logFilename()));          
 }
 TEST_F(ConsoleTest, initConsoleInvalidFileNoThrow){
-    mle::TimeManager m;    
+    mle::TimerManager m;    
     EXPECT_NO_THROW({
         mle::Console c("", m);  
         EXPECT_TRUE(("" == c.logFilename()));    
     });
 }
 TEST_F(ConsoleTest, initConsoleInvalidFileNoThrow2){
-    mle::TimeManager m;    
+    mle::TimerManager m;    
     EXPECT_NO_THROW({
         mle::Console c("", m);      
         c.log("boh", mle::LogClassification::Info);
@@ -51,19 +51,19 @@ TEST_F(ConsoleTest, initConsoleInvalidFileNoThrow2){
     });
 }
 TEST_F(ConsoleTest, setConsoleClassification){
-    mle::TimeManager m;    
+    mle::TimerManager m;    
     mle::Console c("", m);
     c.setMinimumLogClassificationToProcess(mle::LogClassification::Command);
     EXPECT_EQ(c.getMinimumLogClassificationToProcess(), mle::LogClassification::Command);
 }
 TEST_F(ConsoleTest, setConsoleInvalidClassification){
-    mle::TimeManager m;    
+    mle::TimerManager m;    
     mle::Console c("", m);
     c.setMinimumLogClassificationToProcess((mle::LogClassification)-2);
     EXPECT_EQ(c.getMinimumLogClassificationToProcess(), ((mle::LogClassification)-2));
 }
 TEST_F(ConsoleTest, setConsoleInvalidClassification2){
-    mle::TimeManager m;    
+    mle::TimerManager m;    
     mle::Console c("", m);
     c.setMinimumLogClassificationToProcess((mle::LogClassification)std::numeric_limits<int>::max());
     EXPECT_EQ(c.getMinimumLogClassificationToProcess(), mle::Console::getHighestPriorityClassification());

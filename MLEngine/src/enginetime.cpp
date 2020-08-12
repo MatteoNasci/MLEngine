@@ -6,8 +6,8 @@
 #include <cstring>
 
 using namespace mle;
-void EngineTime::now(char* output, const size_t max_size){
-    EngineTime::timeString(EngineTime::extractTime(EngineTime::nowPoint()), output, max_size);
+void EngineTime::nowString(char* output, const size_t max_size){
+    EngineTime::timeString(EngineTime::extractTime(EngineTime::now<std::chrono::system_clock>()), output, max_size);
 }
 void EngineTime::timeString(const time_t& time, char* output, const size_t max_size){
     if(!max_size || output == nullptr){
@@ -32,7 +32,4 @@ void EngineTime::timeString(const time_t& time, char* output, const size_t max_s
 }
 time_t EngineTime::extractTime(const std::chrono::system_clock::time_point& timePoint){
     return std::chrono::system_clock::to_time_t(timePoint);
-}
-std::chrono::system_clock::time_point EngineTime::nowPoint(){
-    return std::chrono::system_clock::now();
 }
