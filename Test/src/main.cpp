@@ -12,7 +12,7 @@ int main(int argc, char** argv){
         mle::Engine::instance().console().log("Init glfw: " + mle::Engine::instance().init(), mle::LogClassification::Info);
     }
     catch(std::exception e){
-        mle::Engine::instance().console().log("Exception: " + e.what());
+        mle::Engine::instance().console().log("Exception: " + e.what(), mle::LogClassification::Info);
     }
     mle::Engine::instance().console().log(exe_path + " Version " + std::to_string(MLEngine_VERSION_MAJOR) + "."
           + std::to_string(MLEngine_VERSION_MINOR), mle::LogClassification::Info);
