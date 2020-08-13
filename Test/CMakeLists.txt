@@ -23,6 +23,12 @@ add_executable(MLEngineTest ${SOURCE_FILES})
 target_include_directories(MLEngineTest PUBLIC "${MLEngineTest_INCLUDE_ROOT}" "${MLEngine_INCLUDE_ROOT}")
 target_link_libraries(MLEngineTest PUBLIC MLEngine)
 
+#removes the console from the application in windows
+if(WIN32)
+    set_target_properties(MLEngineTest PROPERTIES 
+        LINK_FLAGS "/ENTRY:mainCRTStartup /SUBSYSTEM:WINDOWS")
+endif()
+
 #Copy libraries
 if(WIN32)
     add_custom_command(TARGET MLEngineTest POST_BUILD

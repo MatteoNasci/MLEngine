@@ -4,21 +4,20 @@
 
 #include <exception>
 #include <iostream>
+#include <string>
 int main(int argc, char** argv){
-    if (argc < 2) {
-        try{
-            std::cout << "Init glfw: " << mle::Engine::instance().init() << std::endl;
-        }
-        catch(std::exception e){
-            std::cout << "Exception: " << e.what() << std::endl;
-        }
-        mle::Engine::instance().console().log("Miao", mle::LogClassification::Critical);
-        mle::Engine::instance().console().log("Miao2", mle::LogClassification::Critical);
-        mle::Engine::instance().console().log("Miao3", mle::LogClassification::Critical);
-        std::cout << argv[0] << " Version " << MLEngine_VERSION_MAJOR << "."
-              << MLEngine_VERSION_MINOR << std::endl;
-        std::cout << "Usage: " << argv[0] << " number" << std::endl;
+    const std::string exe_path(argv[0]);
+
+    try{
+        mle::Engine::instance().console().log("Init glfw: " + mle::Engine::instance().init(), mle::LogClassification::Info);
     }
+    catch(std::exception e){
+        mle::Engine::instance().console().log("Exception: " + e.what());
+    }
+    mle::Engine::instance().console().log(exe_path + " Version " + std::to_string(MLEngine_VERSION_MAJOR) + "."
+          + std::to_string(MLEngine_VERSION_MINOR), mle::LogClassification::Info);
+    mle::Engine::instance().console().log("Usage: " + exe_path + " number", mle::LogClassification::Info);
+
     while(true){
         mle::Engine::instance().timerManager().advanceTime(0.01);
     }
