@@ -30,6 +30,9 @@ target_link_libraries(MLEngineUnitTesting PRIVATE general ${UnitTest_LIBS})
 target_link_libraries(MLEngineUnitTesting PRIVATE debug ${GoogleTest_Gmock_LIBS_ROOT}/Debug/gmockd.lib)
 target_link_libraries(MLEngineUnitTesting PRIVATE optimized ${GoogleTest_Gmock_LIBS_ROOT}/Release/gmock.lib)
 target_include_directories(MLEngineUnitTesting PRIVATE "${MLEngine_INCLUDE_ROOT}" "${UnitTest_INCLUDE_ROOT}" "${GoogleTest_test_INCLUDE_ROOT}" "${GoogleTest_Gmock_INCLUDE_ROOT}")
+target_compile_definitions(MLEngineUnitTesting PRIVATE general MLE_UNITTEST_DEBUG)
+target_compile_definitions(MLEngineUnitTesting PRIVATE debug MLE_UNITTEST_DEBUG)
+target_compile_definitions(MLEngineUnitTesting PRIVATE optimized MLE_UNITTEST_RELEASE)
 
 #Copy libraries
 if(WIN32)

@@ -8,7 +8,7 @@
 #include <string>
 #include <functional>
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <future>
 #include <mutex>
 
@@ -38,10 +38,10 @@ public:
     LogClassification getMinimumLogClassificationToProcess();
 
     bool addCommand(const std::string& command_key, std::function<void(const std::string& input)> command);
-
+    bool containsCommand(const std::string& command_key);
     bool removeCommand(const std::string& command_key);
     void clearCommands();
-    void getCommandList(std::vector<std::string> out_list) const;
+    void getCommandList(std::vector<std::string>& out_list);
 
     bool log(const std::string& msg, const LogClassification classification);
 
@@ -51,11 +51,36 @@ public:
 
     bool isClassificationProcessable(const LogClassification toTest);
 
-    bool separateCommand(const std::string& fullCommand, std::string& out_command, std::string& out_input) const;
-    bool isMsgCommand(const std::string& msg) const;
+    
     std::string logFilename() const;
+    size_t commandsSize();
+    bool isLoggingtoFile();
 
-    static mle::LogClassification getHighestPriorityClassification();
+    
+    static bool lookForInputName(const std::string& input, size_t& out_nameStartIndex, size_t& out_nameLength); 
+    static bool lookForInputArgument(const std::string& input, size_t& out_argStartIndex, size_t& out_argLength); 
+    static bool separateInput(const std::string& input, std::function<void(std::string&&, std::string&&)> onNameInputPairAction);
+    static bool separateCommand(const std::string& fullCommand, std::string& out_command, std::string& out_input);
+    static bool isMsgCommand(const std::string& msg);
+    static mle::LogClassification classificationFromString(const std::string& s, const LogClassification defaultValue = LogClassification::Normal);
+    static std::string stringFromClassification(const mle::LogClassification classification, const std::string& defaultValue = "");
+    static constexpr mle::LogClassification getHighestPriorityClassification() {
+        return mle::LogClassification::Info;
+    };
+    static constexpr char getCommandInputSeparator(){
+        return '-';
+    };
+    static constexpr char getCommandPrefix(){
+        return '/';
+    };
+    static constexpr char getInputSeparator(){
+        return ' ';
+    };
+    static constexpr char getInputNameSeparator(){
+        return '=';
+    };
+    static const std::unordered_map<std::string, mle::LogClassification>& getMapStringToClass();
+    static const std::unordered_map<mle::LogClassification, std::string>& getMapClassToString();
 private:
     void createAsyncTask();
     void checkAsyncTask();
@@ -63,7 +88,8 @@ private:
 
     static bool asyncWriteToFile(const std::string& filename, std::vector<std::string>&& logs);
 private:
-    std::map<std::string, std::function<void(const std::string& input)>> m_commands;
+    std::mutex m_commandsMutex;
+    std::unordered_map<std::string, std::function<void(const std::string& input)>> m_commands;
     std::string m_loggingFileName;
     std::mutex m_classificationMutex;
     LogClassification m_minimumLogClassificationAccepted;

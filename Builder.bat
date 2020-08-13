@@ -9,7 +9,20 @@ mkdir build
 cd build
 cmake ../
 cmake --build . --config Release
+
+cd UnitTesting/Release/
+START MLEngineUnitTesting.exe
+
+cd ..
+cd ..
+cd Test/Release/
+START MLEngineTest.exe
+
+cd ..
+cd ..
 cmake --build . --config Debug
-START UnitTesting/Release/MLEngineUnitTesting.exe
-START UnitTesting/Debug/MLEngineUnitTesting.exe
-START Test/Release/MLEngineTest.exe
+
+cd UnitTesting/Debug/
+START MLEngineUnitTesting.exe
+cd ..
+cd ..
