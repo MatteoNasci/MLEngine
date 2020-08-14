@@ -32,7 +32,7 @@ Console::Console(const std::string& loggingFileName, TimerManager& timerManager,
     const size_t time_size = 200;
     char time[time_size];
     EngineTime::nowString(time, time_size);
-    logToFile("Logging started at " + std::string(time), LogClassification::Info);
+    logToFile("Logging started at " + std::string(time), Console::getHighestPriorityClassification());
 
     addCommand("/log", [this](const std::string& input){
         log(input, Console::classificationFromString(input));
@@ -172,10 +172,10 @@ bool Console::getCommandsHistory(std::deque<std::string>& out_commands){
 void Console::addCommandToHistory(const std::string& command){
     if(m_maxCommandHistorySize){
         m_commandsHistoryMutex.lock();
+        m_commandsHistory.push_front(command);
         while(m_commandsHistory.size() > m_maxCommandHistorySize){
             m_commandsHistory.pop_back();
         }
-        m_commandsHistory.push_front(command);
         m_commandsHistoryMutex.unlock();
     }
 }
@@ -195,7 +195,7 @@ bool Console::addCommand(const std::string& command_key, std::function<void(cons
         }
     }
 
-    logToFile("Failed to add command: '" + command_key + "'", LogClassification::Info);
+    logToFile("Failed to add command: '" + command_key + "'", Console::getHighestPriorityClassification());
     return false;
 }
 bool Console::containsCommand(const std::string& command_key){
@@ -243,7 +243,7 @@ bool Console::logToFile(const std::string& msg, const LogClassification classifi
 
     m_logsToFileMutex.lock();
     m_logsToFile.push_back(msg);
-    if(!isLoggingtoFile()){
+    if(!isLoggingToFile()){
         createAsyncTask();
     }
     m_logsToFileMutex.unlock();
@@ -318,7 +318,7 @@ bool Console::command(const std::string& msg, const std::string& input){
 
     return command_found;
 }
-bool Console::isLoggingtoFile(){
+bool Console::isLoggingToFile(){
     m_logsToFileTaskMutex.lock();
     const bool res = m_logToFileTask.valid();
     m_logsToFileTaskMutex.unlock();

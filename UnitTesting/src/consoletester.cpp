@@ -44,7 +44,7 @@ protected:
         m_timeManager = &mle::Engine::instance().timerManager();
         m_console = &mle::Engine::instance().console();
 #endif
-        while(m_console->isLoggingtoFile()){
+        while(m_console->isLoggingToFile()){
             m_timeManager->advanceTime(100);
         }
         clearFile(getFileString("ConsoleTestTest.txt"));
@@ -63,12 +63,12 @@ TEST_F(ConsoleTest, initConsoleLogFilename){
 TEST_F(ConsoleTest, initConsoleLogText){
     mle::TimerManager m;  
     mle::Console c(getFileString("TestingInitialLog.txt"), m);  
-    EXPECT_TRUE(c.isLoggingtoFile()); 
+    EXPECT_TRUE(c.isLoggingToFile()); 
 }
 TEST_F(ConsoleTest, initConsoleLogTextWaiting){
     mle::TimerManager m;  
     mle::Console c(getFileString("TestingInitialLog.txt"), m);  
-    while(c.isLoggingtoFile()){
+    while(c.isLoggingToFile()){
         m.advanceTime(100);
     }
     
@@ -112,7 +112,7 @@ TEST_F(ConsoleTest, initConsoleInvalidFileNoThrow2){
     EXPECT_NO_THROW({
         mle::Console c("", m);      
         c.log("boh", mle::LogClassification::Info);
-        while(c.isLoggingtoFile()){
+        while(c.isLoggingToFile()){
             m.advanceTime(100);
         }
     });
@@ -690,7 +690,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestLogToFile){
     EXPECT_TRUE(m_console->removeCommand("/very_usefull_command"));
     EXPECT_TRUE(processed);
 
-    while(m_console->isLoggingtoFile()){
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -731,7 +731,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestLogToFile2){
     EXPECT_TRUE(m_console->removeCommand("/very_usefull_command"));
     EXPECT_TRUE(processed);
 
-    while(m_console->isLoggingtoFile()){
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -773,7 +773,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestYesLogToFile){
     EXPECT_TRUE(m_console->removeCommand("/very_usefull_command"));
     EXPECT_TRUE(processed);
         
-    while(m_console->isLoggingtoFile()){
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -813,11 +813,11 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestYesLogToFileWithIsLoggingCheck){
         }));
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Command);
     EXPECT_TRUE(m_console->command("/very_usefull_command", "pippo=3"));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
+    EXPECT_TRUE(m_console->isLoggingToFile());
     EXPECT_TRUE(m_console->removeCommand("/very_usefull_command"));
     EXPECT_TRUE(processed);
         
-    while(m_console->isLoggingtoFile()){
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -860,7 +860,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestNoLogToFile){
     EXPECT_TRUE(m_console->removeCommand("/very_usefull_command"));
     EXPECT_TRUE(processed);
 
-    while(m_console->isLoggingtoFile()){
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -894,7 +894,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestNoLogToFile){
 TEST_F(ConsoleTest, commandNotFoundTestLogToFile){
     EXPECT_FALSE(m_console->command("/very_usefull_nonexistantcommand", "pippo=3"));
     
-    while(m_console->isLoggingtoFile()){
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -926,8 +926,8 @@ TEST_F(ConsoleTest, commandNotFoundTestLogToFile){
 }
 TEST_F(ConsoleTest, commandNotFoundTestLogToFileWithIsLoggingCheck){
     EXPECT_FALSE(m_console->command("/very_usefull_nonexistantcommand", "pippo=3"));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -961,7 +961,7 @@ TEST_F(ConsoleTest, commandNotFoundTestNoLogToFile){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Info);
     EXPECT_FALSE(m_console->command("/very_usefull_nonexistantcodfgfgmmand", "pippo=3"));
     
-    while(m_console->isLoggingtoFile()){
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -997,7 +997,7 @@ TEST_F(ConsoleTest, commandNotFoundTestYesLogToFile){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Error);
     EXPECT_FALSE(m_console->command("/very_usefull_nonexistantcommand", "pippo=3"));
     
-    while(m_console->isLoggingtoFile()){
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1031,8 +1031,8 @@ TEST_F(ConsoleTest, commandNotFoundTestYesLogToFile){
 TEST_F(ConsoleTest, logToFile){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Normal);
     EXPECT_TRUE(m_console->logToFile("very_usefull_comment", mle::LogClassification::Critical));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1066,8 +1066,8 @@ TEST_F(ConsoleTest, logToFile){
 TEST_F(ConsoleTest, logToFile2){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Normal);
     EXPECT_TRUE(m_console->logToFile("very_uasfasfsa  fgasgfsd  asddsf ss  ds dgggsefull_comment", mle::LogClassification::Normal));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1101,8 +1101,8 @@ TEST_F(ConsoleTest, logToFile2){
 TEST_F(ConsoleTest, logToFileNoClass){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Command);
     EXPECT_FALSE(m_console->logToFile("very_usefull_comment", mle::LogClassification::Critical));
-    EXPECT_FALSE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_FALSE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1136,8 +1136,8 @@ TEST_F(ConsoleTest, logToFileNoClass){
 TEST_F(ConsoleTest, logToFileNoClass2){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Fatal);
     EXPECT_FALSE(m_console->logToFile("very_usefull_comment", mle::LogClassification::Critical));
-    EXPECT_FALSE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_FALSE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1172,8 +1172,8 @@ TEST_F(ConsoleTest, logToFileNoClass2){
 TEST_F(ConsoleTest, log){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Normal);
     EXPECT_TRUE(m_console->log("very_usefull_comment", mle::LogClassification::Critical));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1207,8 +1207,8 @@ TEST_F(ConsoleTest, log){
 TEST_F(ConsoleTest, log2){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Normal);
     EXPECT_TRUE(m_console->log("  a  ", mle::LogClassification::Normal));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1242,8 +1242,8 @@ TEST_F(ConsoleTest, log2){
 TEST_F(ConsoleTest, logNo){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Fatal);
     EXPECT_FALSE(m_console->log("very_usefull_comment", mle::LogClassification::Critical));
-    EXPECT_FALSE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_FALSE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1277,8 +1277,8 @@ TEST_F(ConsoleTest, logNo){
 TEST_F(ConsoleTest, log3){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Command);
     EXPECT_TRUE(m_console->log("very_usefull_comment", mle::LogClassification::Info));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1314,8 +1314,8 @@ TEST_F(ConsoleTest, logCommand){
     EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(i == "ciao=10");EXPECT_TRUE(m_console->logToFile("ciao=10", mle::Console::getHighestPriorityClassification()));}));
     EXPECT_TRUE(m_console->log("/log_to_command-ciao=10", mle::LogClassification::Critical));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1351,8 +1351,8 @@ TEST_F(ConsoleTest, logCommand2){
     EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(m_console->logToFile("/log_to_command", mle::Console::getHighestPriorityClassification()));}));
     EXPECT_TRUE(m_console->log("/log_to_command", mle::LogClassification::Critical));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1388,8 +1388,8 @@ TEST_F(ConsoleTest, logCommandNoLog2){
     EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(i == "ciao=10");EXPECT_TRUE(m_console->logToFile("/log_to_command-ciao=10", mle::Console::getHighestPriorityClassification()));}));
     EXPECT_TRUE(m_console->log("/log_to_command-ciao=10", mle::LogClassification::Info));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1425,8 +1425,8 @@ TEST_F(ConsoleTest, logCommandNoLog){
     EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(i == "ciao=10");EXPECT_FALSE(m_console->logToFile("/log_to_command-ciao=10", mle::LogClassification::Command));}));
     EXPECT_TRUE(m_console->log("/log_to_command-ciao=10", mle::LogClassification::Critical));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
-    EXPECT_FALSE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_FALSE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 
@@ -1462,8 +1462,8 @@ TEST_F(ConsoleTest, logCommandFailed){
     EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(i == "ciao=10");EXPECT_TRUE(m_console->logToFile("/log_to_command-ciao=10", mle::Console::getHighestPriorityClassification()));}));
     EXPECT_FALSE(m_console->log("/log_to_command -ciao=10", mle::LogClassification::Critical));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
-    EXPECT_TRUE(m_console->isLoggingtoFile());
-    while(m_console->isLoggingtoFile()){
+    EXPECT_TRUE(m_console->isLoggingToFile());
+    while(m_console->isLoggingToFile()){
         m_timeManager->advanceTime(100);
     }
 

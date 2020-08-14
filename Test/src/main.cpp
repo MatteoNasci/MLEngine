@@ -30,18 +30,18 @@ int main(int argc, char** argv){
 
     std::vector<std::string> commands;
     Engine::instance().console().getCommandList(commands);
-    mle::Engine::instance().console().log("Commands found: " + std::to_string(commands.size()), LogClassification::Info);
+    mle::Engine::instance().console().log("Commands found: " + std::to_string(commands.size()), Console::getHighestPriorityClassification());
     for(size_t i = 0; i < commands.size(); ++i){
-        mle::Engine::instance().console().log("\t" + commands[i], LogClassification::Info);
+        mle::Engine::instance().console().log("\t" + commands[i], Console::getHighestPriorityClassification());
     }
-    if(!Engine::instance().console().log("/log info", LogClassification::Info)){
-        Engine::instance().console().log("sddggdsgsdgsdgsddgsg", LogClassification::Info);
+    if(!Engine::instance().console().log("/log info", Console::getHighestPriorityClassification())){
+        Engine::instance().console().log("sddggdsgsdgsdgsddgsg", Console::getHighestPriorityClassification());
     }
 
-    mle::MonitorData::instance().logMonitorsInformation(Engine::instance().console(), LogClassification::Info);
+    mle::MonitorData::instance().logMonitorsInformation(Engine::instance().console(), Console::getHighestPriorityClassification());
 
     const int result = 0/*mle::RenderingManager::instance().loop()*/;
-    while(Engine::instance().console().isLoggingtoFile()){
+    while(Engine::instance().console().isLoggingToFile()){
         Engine::instance().timerManager().advanceTime(10);
     }
 

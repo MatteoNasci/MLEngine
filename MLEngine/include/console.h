@@ -55,7 +55,7 @@ public:
     
     std::string logFilename() const;
     size_t commandsSize();
-    bool isLoggingtoFile();
+    bool isLoggingToFile();
     void setCommandsHistoryMaxSize(const size_t size); //TODO: test
     size_t commandsHistoryMaxSize(); //TODO: test
     size_t commandsHistoryCurrentSize(); //TODO: test

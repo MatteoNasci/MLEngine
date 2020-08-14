@@ -32,13 +32,13 @@ void MonitorData::monitorEventReceiver(GLFWmonitor* monitor, const int event){
     if (event == GLFW_CONNECTED)
     {
         // The monitor was connected
-        Engine::instance().console().log("The monitor '" + monitor_name + "' is now connected!", LogClassification::Info);
+        Engine::instance().console().log("The monitor '" + monitor_name + "' is now connected!", Console::getHighestPriorityClassification());
     }
     else if(event == GLFW_DISCONNECTED)
     {
         // The monitor was disconnected
         // In this case only glfwGetMonitorName and glfwGetMonitorUserPointer will be available for the monitor and only before the end of the callback
-        Engine::instance().console().log("The monitor '" + monitor_name + "' is now disconnected!", LogClassification::Info);
+        Engine::instance().console().log("The monitor '" + monitor_name + "' is now disconnected!", Console::getHighestPriorityClassification());
     }
 
     MonitorData::instance().updateMonitorList();
@@ -130,7 +130,7 @@ bool MonitorData::getMonitorInformation(const size_t monitor_index, MonitorData:
 }
 bool MonitorData::logMonitorInformation(const MonitorData::Details& monitor_details, Console& logger, const LogClassification classification) const{  
     std::stringstream stream;
-    stream << "/log " << Console::stringFromClassification(LogClassification::Info) << Console::getCommandInputSeparator() << "Monitor name: '" << monitor_details.name << "', indexed at: '" << monitor_details.index << "'.\n" <<
+    stream << "/log " << Console::stringFromClassification(Console::getHighestPriorityClassification()) << Console::getCommandInputSeparator() << "Monitor name: '" << monitor_details.name << "', indexed at: '" << monitor_details.index << "'.\n" <<
     "Position: {" << monitor_details.positionX << "::" << monitor_details.positionY << "}\n" <<
     "Workarea position: {" << monitor_details.workareaPositionX << "::" << monitor_details.workareaPositionY << "}\n" <<
     "Workarea size: {" << monitor_details.workareaWidth << "::" << monitor_details.workareaHeight << "}\n" <<
