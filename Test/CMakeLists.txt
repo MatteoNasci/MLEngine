@@ -12,6 +12,7 @@ project(MLEngineTest VERSION 1.0)
 set(MLEngine_INCLUDE_ROOT ${CMAKE_SOURCE_DIR}/MLEngine/include/)
 set(MLEngineTest_INCLUDE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 set(MLEngineTest_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/src/)
+set(MLEngineTest_REMOVE_CONSOLE FALSE)
 
 file(GLOB_RECURSE SOURCE_FILES 
 	${MLEngineTest_SOURCE_ROOT}/*.c
@@ -25,8 +26,10 @@ target_link_libraries(MLEngineTest PUBLIC MLEngine)
 
 #removes the console from the application in windows
 if(WIN32)
-    set_target_properties(MLEngineTest PROPERTIES 
-        LINK_FLAGS "/ENTRY:mainCRTStartup /SUBSYSTEM:WINDOWS")
+    if(MLEngineTest_REMOVE_CONSOLE)
+        set_target_properties(MLEngineTest PROPERTIES 
+            LINK_FLAGS "/ENTRY:mainCRTStartup /SUBSYSTEM:WINDOWS")
+    endif()
 endif()
 
 #Copy libraries

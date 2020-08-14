@@ -10,48 +10,67 @@
 
 using namespace mle;
 
-Console::Console(const std::string& loggingFileName, TimerManager& timerManager) :
+Console::Console(const std::string& loggingFileName, TimerManager& timerManager, const size_t commands_queue_max_size) :
     m_commandsMutex(),
-    m_commands(), 
+    m_commands(),
+    m_commandsHistoryMutex(),
+    m_commandsHistory(),
+    m_maxCommandHistorySize(commands_queue_max_size),
     m_loggingFileName(loggingFileName),
     m_minimumLogClassificationAccepted(LogClassification::Normal),
     m_timeManager(timerManager),
     m_logsToFile(),
+    m_logsToFileTaskMutex(),
     m_logToFileTask()
 {
     std::ofstream log_file;
     log_file.open(m_loggingFileName, std::ios::out | std::ios::trunc);
     if(log_file.is_open()){
-        const size_t time_size = 200;
-        char time[time_size];
-        EngineTime::nowString(time, time_size);
-        log_file << "Logging started at " << time;
         log_file.close();
     }
-    addCommand(Console::getCommandPrefix() + "log", [this](const std::string& input){
+
+    const size_t time_size = 200;
+    char time[time_size];
+    EngineTime::nowString(time, time_size);
+    logToFile("Logging started at " + std::string(time), LogClassification::Info);
+
+    addCommand("/log", [this](const std::string& input){
         log(input, Console::classificationFromString(input));
     });
-
-    addCommand(Console::getCommandPrefix() + "log " + stringFromClassification(LogClassification::Normal), [this](const std::string& input){
+    addCommand("/log " + stringFromClassification(LogClassification::Normal), [this](const std::string& input){
         log(input, LogClassification::Normal);
     });
-    addCommand(Console::getCommandPrefix() + "log " + stringFromClassification(LogClassification::Warning), [this](const std::string& input){
+    addCommand("/log " + stringFromClassification(LogClassification::Warning), [this](const std::string& input){
         log(input, LogClassification::Warning);
     });
-    addCommand(Console::getCommandPrefix() + "log " + stringFromClassification(LogClassification::Error), [this](const std::string& input){
+    addCommand("/log " + stringFromClassification(LogClassification::Error), [this](const std::string& input){
         log(input, LogClassification::Error);
     });
-    addCommand(Console::getCommandPrefix() + "log " + stringFromClassification(LogClassification::Critical), [this](const std::string& input){
+    addCommand("/log " + stringFromClassification(LogClassification::Critical), [this](const std::string& input){
         log(input, LogClassification::Critical);
     });
-    addCommand(Console::getCommandPrefix() + "log " + stringFromClassification(LogClassification::Fatal), [this](const std::string& input){
+    addCommand("/log " + stringFromClassification(LogClassification::Fatal), [this](const std::string& input){
         log(input, LogClassification::Fatal);
     });
-    addCommand(Console::getCommandPrefix() + "log " + stringFromClassification(LogClassification::Command), [this](const std::string& input){
+    addCommand("/log " + stringFromClassification(LogClassification::Command), [this](const std::string& input){
         log(input, LogClassification::Command);
     });
-    addCommand(Console::getCommandPrefix() + "log " + stringFromClassification(LogClassification::Info), [this](const std::string& input){
+    addCommand("/log " + stringFromClassification(LogClassification::Info), [this](const std::string& input){
         log(input, LogClassification::Info);
+    });
+    addCommand("/resize command history", [this](const std::string& input){
+        const size_t new_size = input.size() == 0 ? commandsHistoryMaxSize() : std::stoull(input);
+        setCommandsHistoryMaxSize(new_size);
+    });
+    addCommand("/set minimum classification", [this](const std::string& input){
+        const LogClassification new_minimum = classificationFromString(input, getMinimumLogClassificationToProcess());
+        setMinimumLogClassificationToProcess(new_minimum);
+    });
+    addCommand("/remove command", [this](const std::string& input){
+        removeCommand(input);
+    });
+    addCommand("/clear commands", [this](const std::string& input){
+        clearCommands();
     });
 }
 Console::~Console(){
@@ -118,25 +137,66 @@ LogClassification Console::getMinimumLogClassificationToProcess(){
 
     return result;
 }
+void Console::setCommandsHistoryMaxSize(const size_t size){
+    m_commandsHistoryMutex.lock();
+    const bool is_less = size < m_maxCommandHistorySize;
+    m_maxCommandHistorySize = size;
+    if(is_less){
+        while(m_commandsHistory.size() > m_maxCommandHistorySize){
+            m_commandsHistory.pop_front();
+        }
+    }
+    m_commandsHistoryMutex.unlock();
+}
+size_t Console::commandsHistoryMaxSize(){
+    m_commandsHistoryMutex.lock();
+    const size_t res = m_maxCommandHistorySize;
+    m_commandsHistoryMutex.unlock();
+
+    return res;
+}
+size_t Console::commandsHistoryCurrentSize(){
+    m_commandsHistoryMutex.lock();
+    const size_t res = m_commandsHistory.size();
+    m_commandsHistoryMutex.unlock();
+
+    return res;
+}
+bool Console::getCommandsHistory(std::deque<std::string>& out_commands){
+    m_commandsHistoryMutex.lock();
+    out_commands = m_commandsHistory;
+    m_commandsHistoryMutex.unlock();
+
+    return true;
+}
+void Console::addCommandToHistory(const std::string& command){
+    if(m_maxCommandHistorySize){
+        m_commandsHistoryMutex.lock();
+        while(m_commandsHistory.size() > m_maxCommandHistorySize){
+            m_commandsHistory.pop_back();
+        }
+        m_commandsHistory.push_front(command);
+        m_commandsHistoryMutex.unlock();
+    }
+}
 std::string Console::logFilename() const{
     return m_loggingFileName;
 }
 bool Console::addCommand(const std::string& command_key, std::function<void(const std::string& input)> command){
-    if(!command){
-        return false;
+    if(command){
+        if(isMsgCommand(command_key)){
+            m_commandsMutex.lock();
+            if(!m_commands.count(command_key)){
+                m_commands[command_key] = command;
+                m_commandsMutex.unlock();
+                return true;
+            }
+            m_commandsMutex.unlock();
+        }
     }
-    if(!isMsgCommand(command_key)){
-        return false;
-    }
-    m_commandsMutex.lock();
-    if(m_commands.count(command_key)){
-        m_commandsMutex.unlock();
-        return false;
-    }
-    m_commands[command_key] = command;
-    m_commandsMutex.unlock();
 
-    return true;
+    logToFile("Failed to add command: '" + command_key + "'", LogClassification::Info);
+    return false;
 }
 bool Console::containsCommand(const std::string& command_key){
     m_commandsMutex.lock();
@@ -183,7 +243,7 @@ bool Console::logToFile(const std::string& msg, const LogClassification classifi
 
     m_logsToFileMutex.lock();
     m_logsToFile.push_back(msg);
-    if(!m_logToFileTask.valid()){
+    if(!isLoggingtoFile()){
         createAsyncTask();
     }
     m_logsToFileMutex.unlock();
@@ -191,7 +251,9 @@ bool Console::logToFile(const std::string& msg, const LogClassification classifi
     return true;
 }
 void Console::createAsyncTask(){
+    m_logsToFileTaskMutex.lock();
     m_logToFileTask = std::async(std::launch::async, &Console::asyncWriteToFile, logFilename(), std::move(m_logsToFile));
+    m_logsToFileTaskMutex.unlock();
     m_logsToFile.clear();
     createTaskTimer();
 }
@@ -214,17 +276,20 @@ bool Console::asyncWriteToFile(const std::string& filename, std::vector<std::str
     return false;
 }
 void Console::checkAsyncTask(){
-    m_logsToFileMutex.lock();
+    m_logsToFileTaskMutex.lock();
     const bool isTaskOver = (m_logToFileTask.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready);
-    m_logsToFileMutex.unlock();
+    m_logsToFileTaskMutex.unlock();
 
     if(!isTaskOver){
         createTaskTimer();
         return;
     }
 
-    m_logsToFileMutex.lock();
+    m_logsToFileTaskMutex.lock();
     const bool result = m_logToFileTask.get();
+    m_logsToFileTaskMutex.unlock();
+
+    m_logsToFileMutex.lock();
     if(m_logsToFile.size()){
         createAsyncTask();
     }
@@ -234,11 +299,11 @@ bool Console::command(const std::string& msg, const std::string& input){
     bool command_found = containsCommand(msg);   
 
     if(command_found){
-        logToFile(msg + Console::getCommandInputSeparator() + input, LogClassification::Command);
-
         m_commandsMutex.lock();
         const auto command = m_commands[msg];
         m_commandsMutex.unlock();
+
+        addCommandToHistory(msg);
 
         if(command){
             command(input);
@@ -254,9 +319,9 @@ bool Console::command(const std::string& msg, const std::string& input){
     return command_found;
 }
 bool Console::isLoggingtoFile(){
-    m_logsToFileMutex.lock();
+    m_logsToFileTaskMutex.lock();
     const bool res = m_logToFileTask.valid();
-    m_logsToFileMutex.unlock();
+    m_logsToFileTaskMutex.unlock();
 
     return res;
 }

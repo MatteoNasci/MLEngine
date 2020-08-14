@@ -1,6 +1,9 @@
 #include <gmock/gmock.h>
 
 #include <console.h>
+#ifndef MLENGINE_STATIC
+#include <engine.h>
+#endif
 #include <timermanager.h>
 #include <iostream>
 #include <fstream>
@@ -34,8 +37,16 @@ protected:
     mle::TimerManager* m_timeManager;
     virtual void SetUp()
     {      
+#ifdef MLENGINE_STATIC
         m_timeManager = new mle::TimerManager();
         m_console = new mle::Console(getFileString("ConsoleTestTest.txt"), *m_timeManager);
+#else
+        m_timeManager = &mle::Engine::instance().timerManager();
+        m_console = &mle::Engine::instance().console();
+#endif
+        while(m_console->isLoggingtoFile()){
+            m_timeManager->advanceTime(100);
+        }
         clearFile(getFileString("ConsoleTestTest.txt"));
         m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Normal);
         m_console->addCommand("/loggg", [](const std::string&){});
@@ -52,6 +63,14 @@ TEST_F(ConsoleTest, initConsoleLogFilename){
 TEST_F(ConsoleTest, initConsoleLogText){
     mle::TimerManager m;  
     mle::Console c(getFileString("TestingInitialLog.txt"), m);  
+    EXPECT_TRUE(c.isLoggingtoFile()); 
+}
+TEST_F(ConsoleTest, initConsoleLogTextWaiting){
+    mle::TimerManager m;  
+    mle::Console c(getFileString("TestingInitialLog.txt"), m);  
+    while(c.isLoggingtoFile()){
+        m.advanceTime(100);
+    }
     
     std::ifstream log_file;
     log_file.open(getFileString("TestingInitialLog.txt"), std::ios::in);
@@ -65,7 +84,7 @@ TEST_F(ConsoleTest, initConsoleLogText){
         EXPECT_TRUE(a[0] == '\0');
 
         log_file.close();
-        clearFile(getFileString("ConsoleTestTest.txt"));
+        clearFile(getFileString("TestingInitialLog.txt"));
     }    
     else{
         FAIL();
@@ -662,9 +681,10 @@ TEST_F(ConsoleTest, commandFoundAndExecutedWithInput){
 }
 TEST_F(ConsoleTest, commandFoundAndExecutedTestLogToFile){
     bool processed = false;
-    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed](const std::string& input){
+    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed, this](const std::string& input){
         processed = true;
         EXPECT_TRUE("pippo=3" == input);
+        EXPECT_TRUE(m_console->logToFile("pippo=3", mle::Console::getHighestPriorityClassification()));
         }));
     EXPECT_TRUE(m_console->command("/very_usefull_command", "pippo=3"));
     EXPECT_TRUE(m_console->removeCommand("/very_usefull_command"));
@@ -691,7 +711,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestLogToFile){
             copy(a, b);
         }
         std::string s(a);
-        EXPECT_TRUE(s.find("/very_usefull_command-pippo=3") != std::string::npos);
+        EXPECT_TRUE(s.find("pippo=3") != std::string::npos);
 
         log_file.close();
         clearFile(getFileString("ConsoleTestTest.txt"));
@@ -702,9 +722,10 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestLogToFile){
 }
 TEST_F(ConsoleTest, commandFoundAndExecutedTestLogToFile2){
     bool processed = false;
-    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed](const std::string& input){
+    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed, this](const std::string& input){
         processed = true;
         EXPECT_TRUE("pippo=3" == input);
+        EXPECT_TRUE(m_console->logToFile("pippo=3", mle::Console::getHighestPriorityClassification()));
         }));
     EXPECT_TRUE(m_console->command("/very_usefull_command", "pippo=3"));
     EXPECT_TRUE(m_console->removeCommand("/very_usefull_command"));
@@ -731,7 +752,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestLogToFile2){
             copy(a, b);
         }
         std::string s(a);
-        EXPECT_TRUE(s.find("/very_usefull_command-pippo=3") != std::string::npos);
+        EXPECT_TRUE(s.find("pippo=3") != std::string::npos);
 
         log_file.close();
         clearFile(getFileString("ConsoleTestTest.txt"));
@@ -742,9 +763,10 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestLogToFile2){
 }
 TEST_F(ConsoleTest, commandFoundAndExecutedTestYesLogToFile){
     bool processed = false;
-    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed](const std::string& input){
+    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed, this](const std::string& input){
         processed = true;
         EXPECT_TRUE("pippo=3" == input);
+        EXPECT_TRUE(m_console->logToFile("pippo=3", mle::Console::getHighestPriorityClassification()));
         }));
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Command);
     EXPECT_TRUE(m_console->command("/very_usefull_command", "pippo=3"));
@@ -772,7 +794,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestYesLogToFile){
             copy(a, b);
         }
         std::string s(a);
-        EXPECT_TRUE(s.find("/very_usefull_command-pippo=3") != std::string::npos);
+        EXPECT_TRUE(s.find("pippo=3") != std::string::npos);
 
         log_file.close();
         clearFile(getFileString("ConsoleTestTest.txt"));
@@ -784,9 +806,10 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestYesLogToFile){
 }
 TEST_F(ConsoleTest, commandFoundAndExecutedTestYesLogToFileWithIsLoggingCheck){
     bool processed = false;
-    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed](const std::string& input){
+    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed, this](const std::string& input){
         processed = true;
         EXPECT_TRUE("pippo=3" == input);
+        EXPECT_TRUE(m_console->logToFile("pippo=3", mle::Console::getHighestPriorityClassification()));
         }));
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Command);
     EXPECT_TRUE(m_console->command("/very_usefull_command", "pippo=3"));
@@ -815,7 +838,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestYesLogToFileWithIsLoggingCheck){
             copy(a, b);
         }
         std::string s(a);
-        EXPECT_TRUE(s.find("/very_usefull_command-pippo=3") != std::string::npos);
+        EXPECT_TRUE(s.find("pippo=3") != std::string::npos);
 
         log_file.close();
         clearFile(getFileString("ConsoleTestTest.txt"));
@@ -827,9 +850,10 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestYesLogToFileWithIsLoggingCheck){
 }
 TEST_F(ConsoleTest, commandFoundAndExecutedTestNoLogToFile){
     bool processed = false;
-    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed](const std::string& input){
+    EXPECT_TRUE(m_console->addCommand("/very_usefull_command", [&processed, this](const std::string& input){
         processed = true;
         EXPECT_TRUE("pippo=3" == input);
+        EXPECT_FALSE(m_console->logToFile("pippo=3", mle::LogClassification::Fatal));
         }));
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Info);
     EXPECT_TRUE(m_console->command("/very_usefull_command", "pippo=3"));
@@ -857,7 +881,7 @@ TEST_F(ConsoleTest, commandFoundAndExecutedTestNoLogToFile){
             copy(a, b);
         }
         std::string s(a);
-        EXPECT_FALSE(s.find("/very_usefull_command-pippo=3") != std::string::npos);
+        EXPECT_FALSE(s.find("pippo=3") != std::string::npos);
 
         log_file.close();
         clearFile(getFileString("ConsoleTestTest.txt"));
@@ -1287,7 +1311,7 @@ TEST_F(ConsoleTest, log3){
 }
 TEST_F(ConsoleTest, logCommand){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Normal);
-    EXPECT_TRUE(m_console->addCommand("/log_to_command", [](const std::string& i){EXPECT_TRUE(i == "ciao=10");}));
+    EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(i == "ciao=10");EXPECT_TRUE(m_console->logToFile("ciao=10", mle::Console::getHighestPriorityClassification()));}));
     EXPECT_TRUE(m_console->log("/log_to_command-ciao=10", mle::LogClassification::Critical));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
     EXPECT_TRUE(m_console->isLoggingtoFile());
@@ -1312,7 +1336,7 @@ TEST_F(ConsoleTest, logCommand){
             copy(a, b);
         }
         std::string s(a);
-        EXPECT_TRUE(s.find("/log_to_command-ciao=10") != std::string::npos);
+        EXPECT_TRUE(s.find("ciao=10") != std::string::npos);
 
         log_file.close();
         clearFile(getFileString("ConsoleTestTest.txt"));
@@ -1324,7 +1348,7 @@ TEST_F(ConsoleTest, logCommand){
 }
 TEST_F(ConsoleTest, logCommand2){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Command);
-    EXPECT_TRUE(m_console->addCommand("/log_to_command", [](const std::string& i){}));
+    EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(m_console->logToFile("/log_to_command", mle::Console::getHighestPriorityClassification()));}));
     EXPECT_TRUE(m_console->log("/log_to_command", mle::LogClassification::Critical));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
     EXPECT_TRUE(m_console->isLoggingtoFile());
@@ -1361,7 +1385,7 @@ TEST_F(ConsoleTest, logCommand2){
 }
 TEST_F(ConsoleTest, logCommandNoLog2){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Command);
-    EXPECT_TRUE(m_console->addCommand("/log_to_command", [](const std::string& i){EXPECT_TRUE(i == "ciao=10");}));
+    EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(i == "ciao=10");EXPECT_TRUE(m_console->logToFile("/log_to_command-ciao=10", mle::Console::getHighestPriorityClassification()));}));
     EXPECT_TRUE(m_console->log("/log_to_command-ciao=10", mle::LogClassification::Info));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
     EXPECT_TRUE(m_console->isLoggingtoFile());
@@ -1398,7 +1422,7 @@ TEST_F(ConsoleTest, logCommandNoLog2){
 }
 TEST_F(ConsoleTest, logCommandNoLog){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Info);
-    EXPECT_TRUE(m_console->addCommand("/log_to_command", [](const std::string& i){EXPECT_TRUE(i == "ciao=10");}));
+    EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(i == "ciao=10");EXPECT_FALSE(m_console->logToFile("/log_to_command-ciao=10", mle::LogClassification::Command));}));
     EXPECT_TRUE(m_console->log("/log_to_command-ciao=10", mle::LogClassification::Critical));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
     EXPECT_FALSE(m_console->isLoggingtoFile());
@@ -1435,7 +1459,7 @@ TEST_F(ConsoleTest, logCommandNoLog){
 }
 TEST_F(ConsoleTest, logCommandFailed){
     m_console->setMinimumLogClassificationToProcess(mle::LogClassification::Normal);
-    EXPECT_TRUE(m_console->addCommand("/log_to_command", [](const std::string& i){EXPECT_TRUE(i == "ciao=10");}));
+    EXPECT_TRUE(m_console->addCommand("/log_to_command", [this](const std::string& i){EXPECT_TRUE(i == "ciao=10");EXPECT_TRUE(m_console->logToFile("/log_to_command-ciao=10", mle::Console::getHighestPriorityClassification()));}));
     EXPECT_FALSE(m_console->log("/log_to_command -ciao=10", mle::LogClassification::Critical));
     EXPECT_TRUE(m_console->removeCommand("/log_to_command"));
     EXPECT_TRUE(m_console->isLoggingtoFile());

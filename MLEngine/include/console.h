@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <future>
 #include <mutex>
+#include <deque>
 
 namespace mle
 {
@@ -26,7 +27,7 @@ enum class LogClassification{
 
 class MLENGINE_SHARED_EXPORT Console{
 public:
-    Console(const std::string& loggingFileName, TimerManager& timerManager);
+    Console(const std::string& loggingFileName, TimerManager& timerManager, const size_t commands_queue_max_size = 500); //TODO: test added commands
     Console(const Console& rhs) = delete;
     Console(Console&& rhs) = delete;
     ~Console();
@@ -55,6 +56,10 @@ public:
     std::string logFilename() const;
     size_t commandsSize();
     bool isLoggingtoFile();
+    void setCommandsHistoryMaxSize(const size_t size); //TODO: test
+    size_t commandsHistoryMaxSize(); //TODO: test
+    size_t commandsHistoryCurrentSize(); //TODO: test
+    bool getCommandsHistory(std::deque<std::string>& out_commands); //TODO: test
 
     
     static bool lookForInputName(const std::string& input, size_t& out_nameStartIndex, size_t& out_nameLength); 
@@ -86,10 +91,15 @@ private:
     void checkAsyncTask();
     void createTaskTimer();
 
+    void addCommandToHistory(const std::string& command);
+
     static bool asyncWriteToFile(const std::string& filename, std::vector<std::string>&& logs);
 private:
     std::mutex m_commandsMutex;
     std::unordered_map<std::string, std::function<void(const std::string& input)>> m_commands;
+    std::mutex m_commandsHistoryMutex;
+    std::deque<std::string> m_commandsHistory;
+    size_t m_maxCommandHistorySize;
     std::string m_loggingFileName;
     std::mutex m_classificationMutex;
     LogClassification m_minimumLogClassificationAccepted;
@@ -97,6 +107,7 @@ private:
 
     std::mutex m_logsToFileMutex;
     std::vector<std::string> m_logsToFile;
+    std::mutex m_logsToFileTaskMutex;
     std::future<bool> m_logToFileTask;
 };
 }

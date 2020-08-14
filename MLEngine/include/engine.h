@@ -6,9 +6,10 @@
 #include <timermanager.h>
 
 namespace mle{
-class MLENGINE_SHARED_EXPORT Engine{
+class MLENGINE_SHARED_EXPORT Engine{ //TODO: test all
 public:
     bool init();
+    int loop();
 
     Console& console();
     TimerManager& timerManager();
