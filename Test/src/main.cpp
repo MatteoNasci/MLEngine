@@ -24,9 +24,9 @@ int main(int argc, char** argv){
     mle::Engine::instance().console().log("Usage: " + exe_path + " number", mle::Console::getHighestPriorityClassification());
     
     mle::WindowHintsData window_hints = mle::WindowHintsData();
-    /*if(!mle::RenderingManager::instance().addWindow("Ciao", 2560, 1440, 0, mle::WindowShareData(), window_hints)){
+    if(!mle::RenderingManager::instance().addWindow("Ciao", 800, 500, /*MonitorData::instance().getSelectedMonitor()*/MonitorData::Handle(), mle::WindowShareData(), window_hints)){
         mle::Engine::instance().console().log("Failed to create a main window!", mle::Console::getHighestPriorityClassification());
-    }*/
+    }
 
     std::vector<std::string> commands;
     Engine::instance().console().getCommandList(commands);
@@ -40,7 +40,7 @@ int main(int argc, char** argv){
 
     mle::MonitorData::instance().logMonitorsInformation(Engine::instance().console(), Console::getHighestPriorityClassification());
 
-    const int result = 0/*mle::RenderingManager::instance().loop()*/;
+    const int result = Engine::instance().loop();
     while(Engine::instance().console().isLoggingToFile()){
         Engine::instance().timerManager().advanceTime(10);
     }
