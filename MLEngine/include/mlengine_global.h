@@ -1,7 +1,7 @@
 #ifndef MLENGINE_GLOBAL_H
 #define MLENGINE_GLOBAL_H
 
-
+//TODO: fix this shared export define not working properly (if static should have no value)
 #if defined(MLENGINE_STATIC)
 #define MLENGINE_SHARED_EXPORT
 #else //!defined(MLENGINE_STATIC)
