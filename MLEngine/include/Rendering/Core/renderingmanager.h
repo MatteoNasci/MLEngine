@@ -15,6 +15,8 @@
 #include <Rendering/Core/windowattribute.h>
 #include <Rendering/Core/renderingcontexttype.h>
 
+#include <Rendering/Core/contextinitdata.h>
+
 //Vk includes
 #include <Rendering/Core/procaddressvk.h>
 
@@ -47,7 +49,7 @@ public:
     EngineError release();
     EngineError singleLoop();
     size_t getWindowsCount() const;
-    EngineError addWindow(const std::string& title, const int width, const int height, const MonitorHandle& monitor_data, const WindowShareData& share, const WindowHintsData& hints);
+    EngineError addWindow(const std::string& title, const int width, const int height, const MonitorHandle& monitor_data, const WindowShareData& share, const WindowHintsData& hints, const ContextInitData& context_data);
     EngineError enableFullscreenMode(const WindowShareData& window, const MonitorHandle& monitor, const bool enable, const int posX, const int posY, const int width, const int height, const int refresh_rate) const;
     
     EngineError getWindowCurrentMonitor(const WindowShareData& window, MonitorHandle& out_monitor) const;
