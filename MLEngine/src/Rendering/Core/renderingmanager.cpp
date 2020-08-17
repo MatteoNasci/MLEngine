@@ -6,7 +6,7 @@
 #include <Engine/Core/engine.h>
 #include <Engine/Core/engineerrorhelper.h>
 #include <Hardware/connectionevent.h>
-#include <Input/input.h>
+#include <Input/input.h>//TODO: remove this and stuff like this include (Less dependance)
 
 #include <stack>
 #include <sstream>
@@ -371,7 +371,7 @@ EngineError RenderingManager::singleLoop(){
             //Render here
             glClear(GL_COLOR_BUFFER_BIT);
             //Swap buffers
-            glfwSwapBuffers(current_window);
+            glfwSwapBuffers(current_window);  //TODO: do simila thing of poolevents, use enum m_RenderingContextType to determine what to do here
             //Poll and process events
             m_poolAction();
 
