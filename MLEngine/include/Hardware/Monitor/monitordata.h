@@ -11,7 +11,7 @@
 #include <Hardware/Monitor/monitordetails.h>
 
 #include <string>
-#include <functional>
+#include <functional>//TODO: use custom errors in cpp here for better indicating the actual error
 #include <vector>
 //https://www.glfw.org/docs/latest/group__monitor.html
 struct GLFWmonitor;
