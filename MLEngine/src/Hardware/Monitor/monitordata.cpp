@@ -6,7 +6,12 @@
 
 #include <sstream>
 using namespace mle;
-MonitorData::MonitorData() : m_selectedMonitorIndex(0), m_monitors(), m_monitorsUpdateCallback(){
+MonitorData::MonitorData() : m_selectedMonitorIndex(0), m_monitors(), m_monitorsUpdateCallback(){  
+    
+}
+EngineError MonitorData::setMonitorCallback(){
+    glfwSetMonitorCallback(&MonitorData::monitorEventReceiver);
+    return getAndClearError();
 }
 void MonitorData::monitorEventReceiver(GLFWmonitor* monitor, const int event){
     const std::string monitor_name(glfwGetMonitorName(monitor));

@@ -26,7 +26,31 @@ enum class EngineError{ //TODO: test these values so that if values of glfw ever
     //A window that does not have an OpenGL or OpenGL ES context was passed to a function that requires it to have one. Fix the offending call.
     NoWindowContext = 0x0001000A,
 
-    
+    VK_NotReady = 1,
+    VK_Timeout = 2,
+    VK_EventSet = 3,
+    VK_EventReset = 4,
+    VK_Incomplete = 5,
+    VK_ErrorOutOfHostMemory = -1,
+    VK_ErrorOutOfDeviceMemory = -2,
+    VK_ErrorInitializationFailed = -3,
+    VK_ErrorDeviceLost = -4,
+    VK_ErrorMemoryMapFailed = -5,
+    VK_ErrorLayerNotPresent = -6,
+    VK_ErrorExtensionNotPresent = -7,
+    VK_ErrorFeatureNotPresent = -8,
+    VK_ErrorIncompatibleDriver = -9,
+    VK_ErrorTooManyObjects = -10,
+    VK_ErrorFormatNotSupported = -11,
+    VK_ErrorFragmentedPool = -12,
+    VK_ErrorOutOfPoolMemory= -1000069000,
+    VK_ErrorInvalidExternalHandle = -1000072003,
+    VK_ErrorSurfaceLostKHR = -1000000000,
+    VK_ErrorNativeWindowInUseKHR = -1000000001,
+    VK_SuboptimalKHR = 1000001003,
+    VK_ErrorOutOfDateKHR = -1000001004,
+    VK_ErrorValidationFailedExt = -1000011001,
+
     //The rendering loop has been stopped by setting the relative flag to false.
     Stopped,
 };

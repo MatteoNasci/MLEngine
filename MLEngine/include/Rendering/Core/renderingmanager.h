@@ -13,13 +13,16 @@
 #include <Rendering/Core/renderinginitdata.h>
 #include <Engine/Core/engineerror.h>
 #include <Rendering/Core/windowattribute.h>
+#include <Rendering/Core/renderingcontexttype.h>
+
+//Vk includes
+#include <Rendering/Core/procaddressvk.h>
 
 #include <vector>
 #include <string>
 #include <mutex>
 #include <functional>
 #include <array>
-#include <unordered_map>
 //TODO: fare solo engine singleton, se ho bisogno di altri singleton evito e li faccio friend di engine con ctor privato e niente copy o move
 
 //TODO: use glad for opengl extensions. https://www.glfw.org/docs/latest/context_guide.html#context_glext
@@ -31,8 +34,6 @@ public:
     static GeneralValues constexpr dontCareValue(){
         return GeneralValues::DontCare;
     }
-    static const std::unordered_map<EngineError, std::string>& errorToStringMap();
-    static const std::string errorToString(const EngineError error, const std::string& defaultString);
 
     EngineError getWindowAttribute(const WindowShareData& window, const WindowAttribute attribute, int& out_value) const;
 
@@ -118,16 +119,15 @@ public:
     void setWaitForNextEventWithLimitPollAction();
     void setEventTimeout(const double timeout);
     double getEventTimeout() const;
-
-    static EngineError fromInternalToError(const int internal_error);
     
-    /* Vk stuff
+    //Vk stuff
     EngineError isVulkanSupported(bool& out_supported) const;
     EngineError getRequiredInstanceExtensions(std::vector<std::string>& out_extensions) const;
-    EngineError getInstanceProcAddress(const std::string& proc_name, const VkInstance& instance, VkProcAddress& out_address) const;
-    EngineError getPhysicalDevicePresentationSupport(const VkInstance& instance, const VkPhysicalDevice& device, const uint32_t queue_family, bool& out_supported) const;
-    EngineError createWindowSurface(const VkInstance& instance, const WindowShareData& window, const VkAllocationCallbacks& allocator, const VkSurfaceKHR& surface) const;
-    */
+    EngineError getInstanceProcAddress(const std::string& proc_name, const bool dontUseInstance, ProcAddressVk& out_address) const;
+    EngineError getPhysicalDevicePresentationSupport(const uint32_t queue_family, bool& out_supported) const;
+    EngineError createWindowSurface(const WindowShareData& window) const;
+    
+    RenderingContextType getRenderingContextType() const;
 
     WindowShareData getCurrentWindow() const;
     friend class Engine;
@@ -155,6 +155,7 @@ private:
     //TODO: use mutexes for non threadsafe ops if needed
     bool m_initialized;
     bool m_contextInitialized;
+    RenderingContextType m_renderingContextType;
     bool m_run;
     std::function<void(void)> m_poolAction;
     double m_poolTimeout;

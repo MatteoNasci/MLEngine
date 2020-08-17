@@ -1,14 +1,16 @@
 #include <Rendering/Core/renderingmanager.h>
 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <Engine/Core/engine.h>
+#include <Engine/Core/engineerrorhelper.h>
 #include <Hardware/connectionevent.h>
-#include <Hardware/Monitor/monitordata.h>
 #include <Input/input.h>
 
 #include <stack>
 #include <sstream>
+#include <unordered_set>
 
 /*
 These methods cannot be used in glfw callbacks
@@ -20,8 +22,12 @@ glfwWaitEventsTimeout
 glfwTerminate
 */
 
-using namespace mle;
+VkInstance vk_instance;
+VkPhysicalDevice vk_device;
+VkSurfaceKHR vk_surface;
 
+using namespace mle;
+static EngineError checkVulkanExtensionsValidity(const RenderingManager& renderer, std::vector<VkExtensionProperties>& out_extensions);
 RenderingManager::RenderingManager() : m_windows(), m_initialized(false), m_contextInitialized(false), m_run(false), m_poolAction(), m_poolTimeout(0.0){ 
     glfwSetErrorCallback(&RenderingManager::errorCallback);
     setFastestPollAction();
@@ -36,33 +42,6 @@ void RenderingManager::getCompileVersion(int& out_major, int& out_minor, int& ou
     out_major = GLFW_VERSION_MAJOR;
     out_minor = GLFW_VERSION_MINOR;
     out_revision = GLFW_VERSION_REVISION;
-}
-EngineError RenderingManager::fromInternalToError(const int internal_error){
-    return static_cast<EngineError>(internal_error);
-}
-const std::unordered_map<EngineError, std::string>& errorToStringMap(){
-    static const std::unordered_map<EngineError, std::string> map = {
-        {EngineError::Ok, "No error has occurred."},
-        {EngineError::Stopped, "The rendering loop has been stopped."},
-        {EngineError::ApiUnavailable, "GLFW could not find support for the requested API on the system. The installed graphics driver does not support the requested API, or does not support it via the chosen context creation backend. Examples: Some pre-installed Windows graphics drivers do not support OpenGL. AMD only supports OpenGL ES via EGL, while Nvidia and Intel only support it via a WGL or GLX extension. macOS does not provide OpenGL ES at all. The Mesa EGL, OpenGL and OpenGL ES libraries do not interface with the Nvidia binary driver. Older graphics drivers do not support Vulkan."},
-        {EngineError::FormatUnavailable, "If emitted during window creation, the requested pixel format is not supported. If emitted when querying the clipboard, the contents of the clipboard could not be converted to the requested format. If emitted during window creation, one or more hard constraints did not match any of the available pixel formats. If your application is sufficiently flexible, downgrade your requirements and try again. Otherwise, inform the user that their machine does not match your requirements. If emitted when querying the clipboard, ignore the error or report it to the user, as appropriate."},
-        {EngineError::InvalidEnum, "One of the arguments to the function was an invalid enum value, for example requesting GLFW_RED_BITS with glfwGetWindowAttrib. Fix the offending call."},
-        {EngineError::InvalidValue, "One of the arguments to the function was an invalid value, for example requesting a non-existent OpenGL or OpenGL ES version like 2.7. Requesting a valid but unavailable OpenGL or OpenGL ES version will instead result in a GLFW_VERSION_UNAVAILABLE error. Fix the offending call."},
-        {EngineError::NoCurrentContext, "This occurs if a GLFW function was called that needs and operates on the current OpenGL or OpenGL ES context but no context is current on the calling thread. One such function is glfwSwapInterval. Ensure a context is current before calling functions that require a current context."},
-        {EngineError::NotInitialized, "This occurs if a GLFW function was called that must not be called unless the library is initialized. Initialize GLFW before calling any function that requires initialization."},
-        {EngineError::NoWindowContext, "A window that does not have an OpenGL or OpenGL ES context was passed to a function that requires it to have one. Fix the offending call."},
-        {EngineError::OutOfMemory, "A memory allocation failed. A bug in GLFW or the underlying operating system. Report the bug to our issue tracker. https://github.com/glfw/glfw/issues"},
-        {EngineError::PlatformError, "A platform-specific error occurred that does not match any of the more specific categories. A bug or configuration error in GLFW, the underlying operating system or its drivers, or a lack of required resources. Report the issue to our issue tracker. https://github.com/glfw/glfw/issues"},
-        {EngineError::VersionUnavailable, "The requested OpenGL or OpenGL ES version (including any requested context or framebuffer hints) is not available on this machine. The machine does not support your requirements. If your application is sufficiently flexible, downgrade your requirements and try again. Otherwise, inform the user that their machine does not match your requirements. Future invalid OpenGL and OpenGL ES versions, for example OpenGL 4.8 if 5.0 comes out before the 4.x series gets that far, also fail with this error and not GLFW_INVALID_VALUE, because GLFW cannot know what future versions will exist."},
-    };
-    return map;
-}
-const std::string errorToString(const EngineError error, const std::string& defaultString){
-    const std::unordered_map<EngineError, std::string>& map = errorToStringMap();
-    if(map.count(error)){
-        return map.at(error);
-    }
-    return defaultString;
 }
 void RenderingManager::waitForNextEventOrTimeout(){
     glfwWaitEventsTimeout(Engine::instance().renderingManager().getEventTimeout());
@@ -175,9 +154,24 @@ EngineError RenderingManager::getWindowContextRobustness(const WindowShareData& 
 EngineError RenderingManager::release(){
     if(m_initialized){
         m_initialized = !m_initialized;
+        if(m_contextInitialized){
+            m_contextInitialized = !m_contextInitialized;
+            switch (getRenderingContextType())
+            {
+            case RenderingContextType::Vulkan:
+                vkDestroyInstance(vk_instance, nullptr);
+                break;    
+            default:
+                break;
+            }
+        }
+        
         glfwTerminate();
     }
     return EngineError::Ok;            
+}
+RenderingContextType RenderingManager::getRenderingContextType() const{
+    return m_renderingContextType;
 }
 EngineError RenderingManager::enableFullscreenMode(const WindowShareData& window, const MonitorHandle& monitor, const bool enable, const int posX, const int posY, const int width, const int height, const int refresh_rate) const{
     glfwSetWindowMonitor(window.window, (enable ? monitor.monitor : nullptr), posX, posY, width, height, refresh_rate);
@@ -185,7 +179,7 @@ EngineError RenderingManager::enableFullscreenMode(const WindowShareData& window
 }
 EngineError RenderingManager::getAndClearError(){
     const char** s = nullptr;
-    return RenderingManager::fromInternalToError(glfwGetError(s));
+    return EngineErrorHelper::convertFromInternalError(glfwGetError(s));
 }
 EngineError RenderingManager::init(const RenderingInitData& data){
     if(m_initialized){
@@ -202,12 +196,43 @@ EngineError RenderingManager::init(const RenderingInitData& data){
     }
     
     glfwSetJoystickCallback(&Input::joystickCallback);
-    
-    glfwSetMonitorCallback(&MonitorData::monitorEventReceiver);
 
     m_initialized = true;
 
     enableLoop();
+
+    return EngineError::Ok;
+}
+static EngineError checkVulkanExtensionsValidity(const RenderingManager& renderer, std::vector<VkExtensionProperties>& out_extensions){
+    bool vulkan_supported;
+    auto error = renderer.isVulkanSupported(vulkan_supported);
+    if(!vulkan_supported){
+        return EngineError::ApiUnavailable;
+    }
+
+    uint32_t extensionCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+    out_extensions.resize(extensionCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, out_extensions.data());
+    uint32_t glfwExtensionCount = 0;
+    const char** glfwExtensions;
+    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    if(out_extensions.size() < glfwExtensionCount){
+        return EngineError::VK_ErrorExtensionNotPresent;
+    }
+    for(uint32_t i = 0; i < glfwExtensionCount; ++i){
+        bool found = false;
+        const char* required_extension = glfwExtensions[i];
+        for(uint32_t j = 0; j < extensionCount; ++j){
+            if(!std::strcmp(required_extension, out_extensions[j].extensionName)){
+                found = true;
+                break;
+            }
+        }
+        if(!found){
+            return EngineError::VK_ErrorExtensionNotPresent;
+        }
+    }
 
     return EngineError::Ok;
 }
@@ -282,8 +307,54 @@ EngineError RenderingManager::addWindow(const std::string& title, const int widt
         glfwMakeContextCurrent(window); 
 
         if(!m_contextInitialized){
+            Engine::instance().console().log("Initializing rendering context...", Console::getHighestPriorityClassification());
+
+            std::vector<VkExtensionProperties> extensions;
+            const EngineError vulkan_result = checkVulkanExtensionsValidity(*this, extensions);
+            const bool will_use_vulkan = hints_data.try_use_vulkan && hints_data.client_api == ClientApi::None && vulkan_result == EngineError::Ok;
+            if(will_use_vulkan){
+                Engine::instance().console().log("Initializing Vulkan with extensions:", Console::getHighestPriorityClassification());
+                std::vector<const char*> chars(extensions.size());
+                for(size_t i = 0; i < extensions.size(); ++i){
+                    const VkExtensionProperties& prop = extensions[i];
+                    chars[i] = prop.extensionName;
+                    Engine::instance().console().log(prop.extensionName + std::string(", version: ") + std::to_string(prop.specVersion), Console::getHighestPriorityClassification());
+                } 
+
+
+                VkApplicationInfo appInfo{};
+                appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+                appInfo.pApplicationName = "Hello Triangle";
+                appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+                appInfo.pEngineName = "No Engine";
+                appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+                appInfo.apiVersion = VK_API_VERSION_1_0;
+                appInfo.pNext = nullptr;
+
+                VkInstanceCreateInfo createInfo{};
+                createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+                createInfo.pApplicationInfo = &appInfo; 
+
+                createInfo.enabledExtensionCount = static_cast<uint32_t>(chars.size());
+                createInfo.ppEnabledExtensionNames = chars.data();
+                createInfo.enabledLayerCount = 0;
+
+                VkResult result = vkCreateInstance(&createInfo, nullptr, &vk_instance);
+                if(result != VkResult::VK_SUCCESS){
+                    //TODO: stuff
+                    return static_cast<EngineError>(result);
+                }
+                Engine::instance().console().log("Successfull Vulkan init!", Console::getHighestPriorityClassification());
+                m_renderingContextType = RenderingContextType::Vulkan;
+            }
+            else{
+                //TODO: Load opengl
+            }
+
+
+
+            
             m_contextInitialized = !m_contextInitialized;
-            //TODO: load opengl
         }
     }
     return EngineError::Ok;
@@ -477,7 +548,7 @@ void RenderingManager::framebufferSizeCallback(GLFWwindow* window, int width, in
 
 }
 void RenderingManager::errorCallback(int code, const char* desc){
-    const EngineError engine_code = RenderingManager::fromInternalToError(code);
+    const EngineError engine_code = EngineErrorHelper::convertFromInternalError(code);
 
     if(engine_code != EngineError::Ok){
         std::stringstream stream;
@@ -532,4 +603,30 @@ EngineError RenderingManager::setTime(const double time) const{
 }
 EngineError RenderingManager::getProcAddress(const std::string& proc_name, ProcAddress& out_address) const{
     return getAndClearError();
+}
+
+EngineError RenderingManager::isVulkanSupported(bool& out_supported) const{
+    out_supported = glfwVulkanSupported();
+    return getAndClearError();
+}
+EngineError RenderingManager::getRequiredInstanceExtensions(std::vector<std::string>& out_extensions) const{
+    uint32_t count;
+    const char** exts = glfwGetRequiredInstanceExtensions(&count);
+    out_extensions.resize(count);
+    for(uint32_t i = 0; i < count; ++i){
+        out_extensions[i] = std::string(exts[i]);
+    }
+    return getAndClearError();
+}
+EngineError RenderingManager::getInstanceProcAddress(const std::string& proc_name, const bool dontUseInstance, ProcAddressVk& out_address) const{
+    out_address.address = glfwGetInstanceProcAddress(dontUseInstance ? nullptr : vk_instance, proc_name.c_str());
+    return getAndClearError();
+}
+EngineError RenderingManager::getPhysicalDevicePresentationSupport(const uint32_t queue_family, bool& out_supported) const{
+    out_supported = glfwGetPhysicalDevicePresentationSupport(vk_instance, vk_device, queue_family);
+    return getAndClearError();
+}
+EngineError RenderingManager::createWindowSurface(const WindowShareData& window) const{
+    VkResult result = glfwCreateWindowSurface(vk_instance, window.window, nullptr, &vk_surface);
+    return result == VkResult::VK_SUCCESS ? getAndClearError() : EngineErrorHelper::convertFromInternalError(static_cast<int>(result));
 }

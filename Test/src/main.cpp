@@ -10,7 +10,7 @@
 #include <string>
 
 using namespace mle;
-int main(int argc, char** argv){
+int main(int argc, char** argv){  //TODO: check hoe much std::function impacts performance against simple func pointers (for timer and event system)
     const std::string exe_path(argv[0]);
 
     try{
@@ -27,6 +27,9 @@ int main(int argc, char** argv){
     mle::Engine::instance().console().log("Usage: " + exe_path + " number", mle::Console::getHighestPriorityClassification());
     
     mle::WindowHintsData window_hints = mle::WindowHintsData();
+    window_hints.resizable = false;
+    window_hints.client_api = ClientApi::None;
+    window_hints.try_use_vulkan = true;
     if(Engine::instance().renderingManager().addWindow("Ciao", 800, 500, MonitorHandle(), mle::WindowShareData(), window_hints) != EngineError::Ok){
         mle::Engine::instance().console().log("Failed to create a main window!", mle::Console::getHighestPriorityClassification());
     }

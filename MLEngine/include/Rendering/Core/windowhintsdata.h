@@ -15,6 +15,8 @@ namespace mle{
 struct MLENGINE_SHARED_EXPORT WindowHintsData{
     WindowHintsData();
 
+    //Set this to true to request vulkan if possible. This will be ignored if vulkan is not supported.
+    bool try_use_vulkan;
     //specifies whether the windowed mode window will be resizable by the user. The window will still be resizable using the glfwSetWindowSize function. Possible values are GLFW_TRUE and GLFW_FALSE. This hint is ignored for full screen and undecorated windows.
     bool resizable;
     //specifies whether the windowed mode window will be initially visible. Possible values are GLFW_TRUE and GLFW_FALSE. This hint is ignored for full screen windows.

@@ -19,8 +19,8 @@ option(GLFW_BUILD_EXAMPLES "Build the GLFW example programs" OFF)
 option(GLFW_BUILD_TESTS "Build the GLFW test programs" OFF)
 option(GLFW_BUILD_DOCS "Build the GLFW documentation" ON)
 option(GLFW_INSTALL "Generate installation target" ON)
-option(GLFW_VULKAN_STATIC "Assume the Vulkan loader is linked with the application" OFF)
-
+option(GLFW_VULKAN_STATIC "Assume the Vulkan loader is linked with the application" ON)
+set(VCPKG_TARGET_TRIPLET "x64-windows-static")
 include(GNUInstallDirs)
 include(CMakeDependentOption)
 
@@ -50,6 +50,7 @@ if (GLFW_VULKAN_STATIC)
         # loader static library via the CMAKE_SHARED_LINKER_FLAGS
         message(FATAL_ERROR "You are trying to link the Vulkan loader static library into the GLFW shared library")
     endif()
+
     set(_GLFW_VULKAN_STATIC 1)
 endif()
 

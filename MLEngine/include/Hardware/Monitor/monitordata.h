@@ -64,7 +64,7 @@ public:
     static double calculateDpi(const MonitorMode& mode, const int width_mm);
     static double calculateDpi(const int width, const int width_mm);
 
-    friend class RenderingManager;
+    friend class Engine;
 
     MonitorData();
     MonitorData(const MonitorData& rhs) = delete;
@@ -74,6 +74,8 @@ public:
 private: 
     static void monitorEventReceiver(GLFWmonitor* monitor, const int event);
     static EngineError getAndClearError();
+
+    EngineError setMonitorCallback();
 private:
     size_t m_selectedMonitorIndex;
     std::vector<GLFWmonitor*> m_monitors;

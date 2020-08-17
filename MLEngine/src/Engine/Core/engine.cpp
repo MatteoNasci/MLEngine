@@ -40,6 +40,7 @@ const Input& Engine::input() const{
 EngineError Engine::init(const RenderingInitData& data){
     auto result = renderingManager().init(data);
     if(result == EngineError::Ok){
+        monitorData().setMonitorCallback();
         result = monitorData().updateMonitorList();
     }
     return result;
