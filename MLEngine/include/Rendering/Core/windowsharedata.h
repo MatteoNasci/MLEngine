@@ -9,6 +9,7 @@ class RenderingManager;
 struct MLENGINE_SHARED_EXPORT WindowShareData{
     WindowShareData();
     friend class RenderingManager;
+    friend class VulkanHandler;
 private:
     WindowShareData(GLFWwindow* in_window);
     GLFWwindow* window;

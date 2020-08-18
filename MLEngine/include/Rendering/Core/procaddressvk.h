@@ -8,7 +8,7 @@
 
 namespace mle{
 struct MLENGINE_SHARED_EXPORT ProcAddressVk{
-    std::function<void(void)> address;
+    void(*address)(void);
 };
 };
 #endif

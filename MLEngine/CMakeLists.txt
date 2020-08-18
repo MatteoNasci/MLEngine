@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
@@ -25,13 +25,11 @@ set(VULKAN_INCLUDE_ROOT ${VULKAN_SDK_ROOT}/Include/)
 set(GML_INCLUDE_ROOT ${MLEngine_EXT_ROOT}/glm-0.9.9.8/glm/glm)
 set(GLFW_LIBS_ROOT ${GLFW_ROOT}/build/src/)
 
-find_package(Vulkan REQUIRED)
-
 set(BUILD_MLENGINE_STATIC TRUE)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/mlengineconfig.h.in ${MLEngine_INCLUDE_ROOT}/mlengineconfig.h)
 
-set(MLEngine_LIBS opengl32)
+set(MLEngine_LIBS opengl32 ${VULKAN_SDK_ROOT}/Lib/vulkan-1.lib)
 
 # Add source files
 file(GLOB_RECURSE SOURCE_FILES 
@@ -49,7 +47,7 @@ add_library(MLEngine SHARED
     )
 endif()
 
-target_link_libraries(MLEngine PRIVATE general ${MLEngine_LIBS} ${VULKAN_SDK_ROOT}/Lib/vulkan-1.lib)
+target_link_libraries(MLEngine PRIVATE general ${MLEngine_LIBS})
 target_link_libraries(MLEngine PRIVATE debug ${GLFW_LIBS_ROOT}/Debug/glfw3.lib)
 target_link_libraries(MLEngine PRIVATE optimized ${GLFW_LIBS_ROOT}/Release/glfw3.lib)
 

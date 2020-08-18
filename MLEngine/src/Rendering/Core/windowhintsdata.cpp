@@ -3,7 +3,7 @@
 #include <Rendering/Core/generalvalues.h>
 using namespace mle;
 WindowHintsData::WindowHintsData() : 
-    try_use_vulkan(true),
+    try_use_vulkan(false),
     resizable(true),
     visible(true),
     decorated(true),

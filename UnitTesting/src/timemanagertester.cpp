@@ -1,7 +1,7 @@
 #include <gmock/gmock.h>
 
-#include <timermanager.h>
-#include <timerhandle.h>
+#include <Engine/Time/timermanager.h>
+#include <Engine/Time/timerhandle.h>
 
 #include <iostream>
 #include <limits>

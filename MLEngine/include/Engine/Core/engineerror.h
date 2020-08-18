@@ -51,6 +51,14 @@ enum class EngineError{ //TODO: test these values so that if values of glfw ever
     VK_ErrorOutOfDateKHR = -1000001004,
     VK_ErrorValidationFailedExt = -1000011001,
 
+    VK_DebugMessengerExtensionsNotFound = -1000011002,
+    VK_NoPhysicalDeviceFound = -1000011003,
+    VK_NoSuitablePhysicalDeviceFound = -1000011004,
+    VK_NoLogicalDeviceCouldBeCreated = -1000011005,
+    VK_NoSurfaceCreated = -1000011006,
+    VK_NoSuitableQueueFamilyFound = -1000011007,
+    VK_SwapChainNotCreated = -1000011008,
+
     //The rendering loop has been stopped by setting the relative flag to false.
     Stopped,
 };

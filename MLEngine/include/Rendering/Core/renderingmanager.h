@@ -17,9 +17,6 @@
 
 #include <Rendering/Core/contextinitdata.h>
 
-//Vk includes
-#include <Rendering/Core/procaddressvk.h>
-
 #include <vector>
 #include <string>
 #include <mutex>
@@ -49,7 +46,7 @@ public:
     EngineError release();
     EngineError singleLoop();
     size_t getWindowsCount() const;
-    EngineError addWindow(const std::string& title, const int width, const int height, const MonitorHandle& monitor_data, const WindowShareData& share, const WindowHintsData& hints, const ContextInitData& context_data);
+    EngineError addWindow(const std::string& title, const int width, const int height, const MonitorHandle& monitor_data, const WindowShareData& share, const WindowHintsData& hints, ContextInitData& context_data);
     EngineError enableFullscreenMode(const WindowShareData& window, const MonitorHandle& monitor, const bool enable, const int posX, const int posY, const int width, const int height, const int refresh_rate) const;
     
     EngineError getWindowCurrentMonitor(const WindowShareData& window, MonitorHandle& out_monitor) const;
@@ -124,10 +121,6 @@ public:
     
     //Vk stuff
     EngineError isVulkanSupported(bool& out_supported) const;
-    EngineError getRequiredInstanceExtensions(std::vector<std::string>& out_extensions) const;
-    EngineError getInstanceProcAddress(const std::string& proc_name, const bool dontUseInstance, ProcAddressVk& out_address) const;
-    EngineError getPhysicalDevicePresentationSupport(const uint32_t queue_family, bool& out_supported) const;
-    EngineError createWindowSurface(const WindowShareData& window) const;
     
     RenderingContextType getRenderingContextType() const;
 

@@ -21,9 +21,15 @@ public:
         out_found = map.count(error);
         return out_found ? map.at(error) : "";
     }
-    inline static bool isErrorGlfw(const EngineError error);
-    inline static bool isErrorVk(const EngineError error);
-    inline static bool isErrorOther(const EngineError error);
+    inline static bool isErrorGlfw(const EngineError error){
+        return error <= EngineError::NoWindowContext && error >= EngineError::NotInitialized;
+    }
+    inline static bool isErrorVk(const EngineError error){
+        return (error <= EngineError::VK_Incomplete && error >= EngineError::VK_NotReady) || (error <= EngineError::VK_ErrorOutOfHostMemory && error >= EngineError::VK_SwapChainNotCreated);
+    }
+    inline static bool isErrorOther(const EngineError error){
+        return !isErrorGlfw(error) && !isErrorVk(error);
+    }
 private: EngineErrorHelper() = delete;
 };
 };

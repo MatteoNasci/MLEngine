@@ -1,17 +1,19 @@
 #include <Rendering/Core/renderingmanager.h>
 
-#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <Engine/Core/engine.h>
 #include <Engine/Core/engineerrorhelper.h>
 #include <Hardware/connectionevent.h>
 #include <Input/input.h>//TODO: remove this and stuff like this include (Less dependance)
+#include <Rendering/Core/vulkanhandler.h>
 
 #include <stack>
 #include <sstream>
 #include <unordered_set>
 #include <cstring>
+
+using namespace mle;
 
 /*
 These methods cannot be used in glfw callbacks
@@ -22,22 +24,6 @@ glfwWaitEvents
 glfwWaitEventsTimeout
 glfwTerminate
 */
-
-VkInstance vk_instance;
-VkDebugUtilsMessengerEXT debugMessenger;
-VkPhysicalDevice vk_device;
-VkSurfaceKHR vk_surface;
-
-using namespace mle;
-static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData);
-static EngineError checkVulkanLayersValidity(const std::vector<const char*>& requested_layers);
-static EngineError checkVulkanExtensionsValidity(const RenderingManager& renderer, const std::vector<const char*>& requested_layers, std::vector<VkExtensionProperties>& out_extensions);
-
-
 
 RenderingManager::RenderingManager() : m_windows(), m_initialized(false), m_contextInitialized(false), m_run(false), m_poolAction(), m_poolTimeout(0.0){ 
     glfwSetErrorCallback(&RenderingManager::errorCallback);
@@ -165,17 +151,16 @@ EngineError RenderingManager::getWindowContextRobustness(const WindowShareData& 
 EngineError RenderingManager::release(){
     if(m_initialized){
         m_initialized = !m_initialized;
+        m_renderingContextType = RenderingContextType::None;
         if(m_contextInitialized){
             m_contextInitialized = !m_contextInitialized;
             switch (getRenderingContextType())
             {
             case RenderingContextType::Vulkan:
-                vkDestroyInstance(vk_instance, nullptr);
-                break;    
+                VulkanHandler::release();
             default:
                 break;
             }
-            m_renderingContextType = RenderingContextType::None;
         }
         
         glfwTerminate();
@@ -215,77 +200,8 @@ EngineError RenderingManager::init(const RenderingInitData& data){
 
     return EngineError::Ok;
 }
-static EngineError checkVulkanExtensionsValidity(const RenderingManager& renderer, const std::vector<const char*>& requested_layers, std::vector<VkExtensionProperties>& out_extensions){
-    bool vulkan_supported;
-    auto error = renderer.isVulkanSupported(vulkan_supported);
-    if(!vulkan_supported){
-        return EngineError::ApiUnavailable;
-    }
 
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    out_extensions.resize(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, out_extensions.data());
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    if(out_extensions.size() < glfwExtensionCount){
-        return EngineError::VK_ErrorExtensionNotPresent;
-    }
-    for(uint32_t i = 0; i < glfwExtensionCount; ++i){
-        bool found = false;
-        const char* required_extension = glfwExtensions[i];
-        for(uint32_t j = 0; j < extensionCount; ++j){
-            if(!std::strcmp(required_extension, out_extensions[j].extensionName)){
-                found = true;
-                break;
-            }
-        }
-        if(!found){
-            return EngineError::VK_ErrorExtensionNotPresent;
-        }
-    }
-
-    return checkVulkanLayersValidity();
-}
-static EngineError checkVulkanLayersValidity(const std::vector<const char*>& requested_layers){
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-    if(availableLayers.size() < requested_layers.size()){
-        return EngineError::VK_ErrorLayerNotPresent;
-    }
-    for(uint32_t i = 0; i < requested_layers.size(); ++i){
-        bool found = false;
-        const char* required_extension = requested_layers[i];
-        for(uint32_t j = 0; j < availableLayers.size(); ++j){
-            if(!std::strcmp(required_extension, availableLayers[j].extensionName)){
-                found = true;
-                break;
-            }
-        }
-        if(!found){
-            return EngineError::VK_ErrorLayerNotPresent;
-        }
-    }
-
-    return EngineError::Ok;
-}
-static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData){
-    
-    //TODO: print a representation of other arguments too
-    Engine::instance().console().log("validation layer: " + pCallbackData->pMessage, Console::getHighestPriorityClassification());
-
-    return VK_FALSE;
-}
-EngineError RenderingManager::addWindow(const std::string& title, const int width, const int height, const MonitorHandle& monitor_data, const WindowShareData& share_data, const WindowHintsData& hints_data, const ContextInitData& context_data){
+EngineError RenderingManager::addWindow(const std::string& title, const int width, const int height, const MonitorHandle& monitor_data, const WindowShareData& share_data, const WindowHintsData& hints_data, ContextInitData& context_data){
     //Set window hints
     glfwDefaultWindowHints();
     glfwWindowHint(static_cast<int>(WindowAttribute::Resizable), hints_data.resizable);
@@ -333,6 +249,8 @@ EngineError RenderingManager::addWindow(const std::string& title, const int widt
     }       
     m_windows.push_back(window);
 
+    context_data.window = WindowShareData(window);
+
     glfwSetKeyCallback(window, &Input::keyCallback);
     glfwSetCharCallback(window, &Input::characterCallback);
     glfwSetCharModsCallback(window, &Input::charModsCallback);
@@ -353,71 +271,19 @@ EngineError RenderingManager::addWindow(const std::string& title, const int widt
 
     if(m_windows.size() == 1){
         //Make the window's context current
-        glfwMakeContextCurrent(window); 
 
         if(!m_contextInitialized){
             Engine::instance().console().log("Initializing rendering context...", Console::getHighestPriorityClassification());
-
-            std::vector<VkExtensionProperties> extensions;
-            const EngineError vulkan_result = checkVulkanExtensionsValidity(*this, (context_data.vulkan_use_layers ? context_data.vulkan_layers : {}), extensions);
-            Engine::instance().console().log("Checking for Vulkan with result code: " + static_cast<int>(vulkan_result), Console::getHighestPriorityClassification());
-            const bool will_use_vulkan = hints_data.try_use_vulkan && hints_data.client_api == ClientApi::None && vulkan_result == EngineError::Ok;
-            if(will_use_vulkan){
-                Engine::instance().console().log("Initializing Vulkan with extensions:", Console::getHighestPriorityClassification());
-                std::vector<const char*> chars(extensions.size());
-                for(size_t i = 0; i < extensions.size(); ++i){
-                    const VkExtensionProperties& prop = extensions[i];
-                    chars[i] = prop.extensionName;
-                    Engine::instance().console().log(prop.extensionName + std::string(", version: ") + std::to_string(prop.specVersion), Console::getHighestPriorityClassification());
-                } 
-
-
-                VkApplicationInfo appInfo{};
-                appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-                appInfo.pApplicationName = "Hello Triangle";
-                appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-                appInfo.pEngineName = "No Engine";
-                appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-                appInfo.apiVersion = VK_API_VERSION_1_0;
-                appInfo.pNext = nullptr;
-
-                VkInstanceCreateInfo createInfo{};
-                createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-                createInfo.pApplicationInfo = &appInfo; 
-
-                createInfo.enabledExtensionCount = static_cast<uint32_t>(chars.size());
-                createInfo.ppEnabledExtensionNames = chars.data();
-                if(context_data.vulkan_use_layers){
-                    createInfo.enabledLayerCount = context_data.vulkan_layers.size();
-                    createInfo.ppEnabledLayerNames = context_data.vulkan_layers.data();
-                }else{
-                    createInfo.enabledLayerCount = 0;
-                }
-
-                VkResult result = vkCreateInstance(&createInfo, nullptr, &vk_instance);
-                if(result != VkResult::VK_SUCCESS){
-                    //TODO: stuff
-                    return static_cast<EngineError>(result);
-                }
-                Engine::instance().console().log("Successfull Vulkan init!", Console::getHighestPriorityClassification());
+            
+            bool vulkan_supported;
+            isVulkanSupported(vulkan_supported);
+            if(hints_data.try_use_vulkan && hints_data.client_api == ClientApi::None && vulkan_supported){
+                VulkanHandler::initialize(context_data, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
                 m_renderingContextType = RenderingContextType::Vulkan;
-
-                if(context_data.vulkan_use_layers){
-                    VkDebugUtilsMessengerCreateInfoEXT messengerCreateInfo{};
-                    messengerCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-                    messengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-                    messengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-                    messengerCreateInfo.pfnUserCallback = vulkanDebugCallback;
-                    messengerCreateInfo.pUserData = nullptr;
-
-                    ProcAddressVk address;
-                    auto getVkAddressError = getInstanceProcAddress("vkCreateDebugUtilsMessengerEXT", false, address);
-                    if( != EngineError::Ok){
-                        //TODO: errore
-                    }
-                }
             }
             else{
+                
+                glfwMakeContextCurrent(window); 
                 //TODO: Load opengl
             }
 
@@ -430,18 +296,20 @@ EngineError RenderingManager::addWindow(const std::string& title, const int widt
     return EngineError::Ok;
 }
 EngineError RenderingManager::singleLoop(){
+    
+    VulkanHandler::advanceLoggerTime(Engine::instance().frameTime().getLastFrameTime());
     if(m_run){
         std::stack<GLFWwindow*> windows_to_remove;
         for(size_t i = 0; i < m_windows.size(); ++i){
             GLFWwindow* current_window = m_windows[i];
 
             //Make the window's context current
-            glfwMakeContextCurrent(current_window);
+            //glfwMakeContextCurrent(current_window);
 
             //Render here
             glClear(GL_COLOR_BUFFER_BIT);
             //Swap buffers
-            glfwSwapBuffers(current_window);  //TODO: do simila thing of poolevents, use enum m_RenderingContextType to determine what to do here
+            //glfwSwapBuffers(current_window);  //TODO: do simila thing of poolevents, use enum m_RenderingContextType to determine what to do here
             //Poll and process events
             m_poolAction();
 
@@ -623,7 +491,7 @@ void RenderingManager::errorCallback(int code, const char* desc){
     if(engine_code != EngineError::Ok){
         std::stringstream stream;
         std::string t(desc);
-        stream << "An error occurred in the rendering manager! Error description: " << code << ": " << std::move(t);
+        stream << "An error occurred in the rendering manager(Glfw)! Error description: " << code << ": " << std::move(t);
         Engine::instance().console().log(stream.str(), Console::getHighestPriorityClassification());
     }
 }
@@ -678,25 +546,4 @@ EngineError RenderingManager::getProcAddress(const std::string& proc_name, ProcA
 EngineError RenderingManager::isVulkanSupported(bool& out_supported) const{
     out_supported = glfwVulkanSupported();
     return getAndClearError();
-}
-EngineError RenderingManager::getRequiredInstanceExtensions(std::vector<std::string>& out_extensions) const{
-    uint32_t count;
-    const char** exts = glfwGetRequiredInstanceExtensions(&count);
-    out_extensions.resize(count);
-    for(uint32_t i = 0; i < count; ++i){
-        out_extensions[i] = std::string(exts[i]);
-    }
-    return getAndClearError();
-}
-EngineError RenderingManager::getInstanceProcAddress(const std::string& proc_name, const bool dontUseInstance, ProcAddressVk& out_address) const{
-    out_address.address = glfwGetInstanceProcAddress(dontUseInstance ? nullptr : vk_instance, proc_name.c_str());
-    return getAndClearError();
-}
-EngineError RenderingManager::getPhysicalDevicePresentationSupport(const uint32_t queue_family, bool& out_supported) const{
-    out_supported = glfwGetPhysicalDevicePresentationSupport(vk_instance, vk_device, queue_family);
-    return getAndClearError();
-}
-EngineError RenderingManager::createWindowSurface(const WindowShareData& window) const{
-    VkResult result = glfwCreateWindowSurface(vk_instance, window.window, nullptr, &vk_surface);
-    return result == VkResult::VK_SUCCESS ? getAndClearError() : EngineErrorHelper::convertFromInternalError(static_cast<int>(result));
 }

@@ -1,10 +1,10 @@
 #include <gmock/gmock.h>
 
-#include <console.h>
+#include <Engine/Debug/console.h>
 #ifndef MLENGINE_STATIC
-#include <engine.h>
+#include <Engine/Core/engine.h>
 #endif
-#include <timermanager.h>
+#include <Engine/Time/timermanager.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
