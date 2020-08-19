@@ -171,8 +171,16 @@ static VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabiliti
 static EngineError createShaderModule(const std::vector<char>& code, VkShaderModule& out_module);
 static void waitForLogging();
 static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+static EngineError createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+static EngineError copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 static void waitForLogging(){
+    while(s_logger.console.isLoggingToFile()){
+        VulkanHandler::advanceLoggerTime(10);
+    }
+}
+static void waitForLoggingWithText(const std::string& text){
+    s_logger.console.log(text, Console::getHighestPriorityClassification());
     while(s_logger.console.isLoggingToFile()){
         VulkanHandler::advanceLoggerTime(10);
     }
@@ -354,40 +362,56 @@ EngineError VulkanHandler::cleanupSwapChain(){
 
 
 
-EngineError VulkanHandler::createVertexBuffer(){
+static EngineError createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
-
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkBuffer buffer;
     if (vkCreateBuffer(s_state.logical_device.value().device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        return EngineError::VK_FailedCreateBuffer;
+        throw std::runtime_error("failed to create buffer!");
     }
-    s_state.vertexBuffer = buffer;
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(s_state.logical_device.value().device, s_state.vertexBuffer.value(), &memRequirements);  
+    vkGetBufferMemoryRequirements(s_state.logical_device.value().device, buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    VkDeviceMemory memory;
-    if (vkAllocateMemory(s_state.logical_device.value().device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate vertex buffer memory!");
+    if (vkAllocateMemory(s_state.logical_device.value().device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate buffer memory!");
     }
-    s_state.vertexBufferMemory = memory;
 
-    vkBindBufferMemory(s_state.logical_device.value().device, s_state.vertexBuffer.value(), s_state.vertexBufferMemory.value(), 0);
+    vkBindBufferMemory(s_state.logical_device.value().device, buffer, bufferMemory, 0);
+
+    return EngineError::Ok;
+}
+EngineError VulkanHandler::createVertexBuffer(){
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
     void* data;
-    vkMapMemory(s_state.logical_device.value().device, s_state.vertexBufferMemory.value(), 0, bufferInfo.size, 0, &data);
-    memcpy(data, vertices.data(), (size_t) bufferInfo.size);
-    vkUnmapMemory(s_state.logical_device.value().device, s_state.vertexBufferMemory.value());
+    vkMapMemory(s_state.logical_device.value().device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t) bufferSize);
+    vkUnmapMemory(s_state.logical_device.value().device, stagingBufferMemory);
+
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+
+    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+    s_state.vertexBuffer = vertexBuffer;
+    s_state.vertexBufferMemory = vertexBufferMemory;
+
+    vkDestroyBuffer(s_state.logical_device.value().device, stagingBuffer, nullptr);
+    vkFreeMemory(s_state.logical_device.value().device, stagingBufferMemory, nullptr);
 
     return EngineError::Ok;
 }
@@ -1332,4 +1356,38 @@ static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags proper
     }
 
     throw std::runtime_error("failed to find suitable memory type!");
+}
+static EngineError copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = s_state.commandPool.value();
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(s_state.logical_device.value().device, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    VkBufferCopy copyRegion{};
+    copyRegion.size = size;
+    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(s_state.logical_device.value().graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(s_state.logical_device.value().graphicsQueue);
+
+    vkFreeCommandBuffers(s_state.logical_device.value().device, s_state.commandPool.value(), 1, &commandBuffer);
+
+    return EngineError::Ok;
 }
