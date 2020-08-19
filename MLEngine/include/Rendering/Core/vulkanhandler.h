@@ -50,6 +50,7 @@ private: VulkanHandler() = delete;
     static EngineError createUniformBuffers();
     static EngineError createDescriptorPool();
     static EngineError createDescriptorSets();
+    static EngineError createTextureImage();
 
     static EngineError recreateSwapChain();
     static EngineError cleanupSwapChain();

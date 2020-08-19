@@ -16,6 +16,10 @@ build/
 # Compiled shaders
 *.spv
 
+# Images
+*.jpg
+*.png
+
 # Precompiled Headers
 *.gch
 *.pch

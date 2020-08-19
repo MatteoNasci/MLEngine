@@ -23,6 +23,7 @@ set(GLFW_ROOT ${MLEngine_EXT_ROOT}/Glfw/)
 set(GLFW_INCLUDE_ROOT ${GLFW_ROOT}/include/)
 set(VULKAN_INCLUDE_ROOT ${VULKAN_SDK_ROOT}/Include/)
 set(GML_INCLUDE_ROOT ${MLEngine_EXT_ROOT}/glm-0.9.9.8/glm/)
+set(STB_INCLUDE_ROOT ${MLEngine_EXT_ROOT}/stb/)
 set(GLFW_LIBS_ROOT ${GLFW_ROOT}/build/src/)
 
 set(BUILD_MLENGINE_STATIC TRUE)
@@ -53,7 +54,7 @@ target_link_libraries(MLEngine PRIVATE optimized ${GLFW_LIBS_ROOT}/Release/glfw3
 
 target_compile_definitions(MLEngine PRIVATE MLENGINE_LIBRARY)
 target_include_directories(MLEngine PRIVATE "${GLFW_INCLUDE_ROOT}" "${VULKAN_INCLUDE_ROOT}")
-target_include_directories(MLEngine PUBLIC "${GML_INCLUDE_ROOT}" "${MLEngine_INCLUDE_ROOT}")
+target_include_directories(MLEngine PUBLIC "${GML_INCLUDE_ROOT}" "${MLEngine_INCLUDE_ROOT}" "${STB_INCLUDE_ROOT}")
 
 #Copy libraries
 if(WIN32)
