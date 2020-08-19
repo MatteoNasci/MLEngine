@@ -1,7 +1,9 @@
 #ifndef VULKANHANDLER_H
 #define VULKANHANDLER_H
 
+#define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <mlengine_global.h>
 
@@ -11,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <chrono>
 
 namespace mle{
 class MLENGINE_SHARED_EXPORT VulkanHandler{
@@ -42,9 +45,15 @@ private: VulkanHandler() = delete;
     static EngineError createCommandBuffers();
     static EngineError createSyncObjects();
     static EngineError createVertexBuffer();
+    static EngineError createIndexBuffer();
+    static EngineError createDescriptorSetLayout();
+    static EngineError createUniformBuffers();
+    static EngineError createDescriptorPool();
+    static EngineError createDescriptorSets();
 
     static EngineError recreateSwapChain();
     static EngineError cleanupSwapChain();
+    static EngineError createSwapChainObjects();
 };
 };
 
