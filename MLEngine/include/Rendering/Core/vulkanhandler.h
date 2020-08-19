@@ -1,6 +1,8 @@
 #ifndef VULKANHANDLER_H
 #define VULKANHANDLER_H
 
+#include <glm/glm.hpp>
+
 #include <mlengine_global.h>
 
 #include <Engine/Core/engineerror.h>
@@ -39,6 +41,7 @@ private: VulkanHandler() = delete;
     static EngineError createCommandPool();
     static EngineError createCommandBuffers();
     static EngineError createSyncObjects();
+    static EngineError createVertexBuffer();
 
     static EngineError recreateSwapChain();
     static EngineError cleanupSwapChain();

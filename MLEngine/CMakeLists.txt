@@ -22,7 +22,7 @@ set(MLEngine_EXT_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/ext/)
 set(GLFW_ROOT ${MLEngine_EXT_ROOT}/Glfw/)
 set(GLFW_INCLUDE_ROOT ${GLFW_ROOT}/include/)
 set(VULKAN_INCLUDE_ROOT ${VULKAN_SDK_ROOT}/Include/)
-set(GML_INCLUDE_ROOT ${MLEngine_EXT_ROOT}/glm-0.9.9.8/glm/glm)
+set(GML_INCLUDE_ROOT ${MLEngine_EXT_ROOT}/glm-0.9.9.8/glm/)
 set(GLFW_LIBS_ROOT ${GLFW_ROOT}/build/src/)
 
 set(BUILD_MLENGINE_STATIC TRUE)

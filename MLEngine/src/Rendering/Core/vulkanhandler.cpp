@@ -13,11 +13,38 @@
 #include <limits>
 #include <optional>
 #include <algorithm>
+#include <array>
 
 
 
 using namespace mle;
 
+struct VertexData{
+    glm::vec2 pos;
+    glm::vec3 color;
+    static VkVertexInputBindingDescription getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(VertexData);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+        return bindingDescription;
+    }
+    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions(){
+        std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(VertexData, pos);
+
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(VertexData, color);
+
+        return attributeDescriptions;
+    }
+};
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
@@ -82,6 +109,8 @@ struct VulkanData{
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight;
+    std::optional<VkBuffer> vertexBuffer;
+    std::optional<VkDeviceMemory> vertexBufferMemory;
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
     std::optional<ContextInitData> context_data;
@@ -113,6 +142,12 @@ static Logger s_logger;
 static VulkanData s_state;
 static size_t currentFrame = 0;
 
+static const std::vector<VertexData> vertices = {
+    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+};
+
 
 static const size_t MaxFramesInFlight = 2;
 
@@ -135,7 +170,7 @@ static VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR
 static VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
 static EngineError createShaderModule(const std::vector<char>& code, VkShaderModule& out_module);
 static void waitForLogging();
-
+static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 static void waitForLogging(){
     while(s_logger.console.isLoggingToFile()){
@@ -203,6 +238,8 @@ EngineError VulkanHandler::initialize(const ContextInitData& context_data){
 
     auto createCommandPoolError = createCommandPool();
 
+    auto createVertexBufferError = createVertexBuffer();
+
     auto createCommandBuffersError = createCommandBuffers();
 
     auto createSemaphoresError = createSyncObjects();
@@ -210,6 +247,8 @@ EngineError VulkanHandler::initialize(const ContextInitData& context_data){
     return EngineError::Ok;
 }
 EngineError VulkanHandler::release(){
+    s_logger.console.log("Releasing Vulkan resources...", Console::getHighestPriorityClassification());
+
     if(s_state.logical_device.has_value()){ 
         for(size_t i = 0; i < s_state.inFlightFences.size(); ++i){
             vkDestroyFence(s_state.logical_device.value().device, s_state.inFlightFences[i], nullptr);
@@ -242,6 +281,16 @@ EngineError VulkanHandler::release(){
         s_state.pipelineLayout.reset();
 
         cleanupSwapChain();
+
+        if(s_state.vertexBuffer.has_value()){
+            vkDestroyBuffer(s_state.logical_device.value().device, s_state.vertexBuffer.value(), nullptr);
+        }
+        s_state.vertexBuffer.reset();
+
+        if(s_state.vertexBufferMemory.has_value()){
+            vkFreeMemory(s_state.logical_device.value().device, s_state.vertexBufferMemory.value(), nullptr);
+        }
+        s_state.vertexBufferMemory.reset();
 
         vkDestroyDevice(s_state.logical_device.value().device, nullptr);
     }
@@ -303,40 +352,45 @@ EngineError VulkanHandler::cleanupSwapChain(){
 }
 
 
-/*
-For those who wish to use dynamic states for the viewport and scissors to make window resizing more efficient, the official documentation doesn't provide any code in the dynamic states section. The only code reference I found was from a YouTube video — disq.us . . . in German. Here is what I got out of it:
-
-1. Use the code from Drawing a Triangle > Graphics Pipeline Basics > Fixed Functions > Dynamic State
-- The dynamicStates array should be a class variable
-- The rest should be included in your createGraphicsPipeline function.
-
-2. Go to pipelineInfo.pDynamicState and replace the nullptr with &dynamicState.
-
-3. Take the viewport and scissor creation code from createGraphicsPipeline and plunk it into createCommandBuffers, right after you bind the pipeline.
-
-4. Go to viewportState and replace &viewport and &scissor with nullptr. Consider adding reminders that these are // Dynamic and are ignored. Importantly, do not set the associated sizes to 0!
-
-5. Head back to createGraphicsPipeline.
-- After the viewport creation, write vkCmdSetViewport(commandBuffers[i], 0, 1, &viewport);
-- After the scissor creation, write vkCmdSetScissor(commandBuffers[i], 0, 1, &scissor);
-
-6. Now you can go ahead and remove createGraphicsPipeline from recreateSwapChain().
-
-7. Finally, move vkDestroyPipeline and vkDestroyPipelineLayout from cleanupSwapChain to cleanup.
-
-Hopefully someone will find this helpful.
 
 
-        Thanks, this worked for me, except that:
-        - dynamicStates doesn't have to be a class variable, in the video it isn't either.
-        - replace VK_DYNAMIC_STATE_LINE_WIDTH from dynamicStates with VK_DYNAMIC_STATE_SCISSOR
-        - "5. Head back to createGraphicsPipeline" should read "5. Head back to createCommandBuffers"
+EngineError VulkanHandler::createVertexBuffer(){
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = sizeof(vertices[0]) * vertices.size();
 
-        Swapchain recreation went down from 6-7 to 4 ms. But if I had like 20 shaders instead of just one the difference would be a lot greater.
-*/
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+    VkBuffer buffer;
+    if (vkCreateBuffer(s_state.logical_device.value().device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+        return EngineError::VK_FailedCreateBuffer;
+    }
+    s_state.vertexBuffer = buffer;
 
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(s_state.logical_device.value().device, s_state.vertexBuffer.value(), &memRequirements);  
 
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    VkDeviceMemory memory;
+    if (vkAllocateMemory(s_state.logical_device.value().device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate vertex buffer memory!");
+    }
+    s_state.vertexBufferMemory = memory;
+
+    vkBindBufferMemory(s_state.logical_device.value().device, s_state.vertexBuffer.value(), s_state.vertexBufferMemory.value(), 0);
+
+    void* data;
+    vkMapMemory(s_state.logical_device.value().device, s_state.vertexBufferMemory.value(), 0, bufferInfo.size, 0, &data);
+    memcpy(data, vertices.data(), (size_t) bufferInfo.size);
+    vkUnmapMemory(s_state.logical_device.value().device, s_state.vertexBufferMemory.value());
+
+    return EngineError::Ok;
+}
 void VulkanHandler::notifyFramebufferResized(){
     s_state.framebufferResized = true;
 }
@@ -500,7 +554,11 @@ EngineError VulkanHandler::createCommandBuffers(){
         scissor.extent = s_state.swapChainExtent;
         vkCmdSetScissor(s_state.commandBuffers[i], 0, 1, &scissor);
 
-        vkCmdDraw(s_state.commandBuffers[i], 3, 1, 0, 0);
+        VkBuffer vertexBuffers[] = {s_state.vertexBuffer.value()};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(s_state.commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+        vkCmdDraw(s_state.commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
         vkCmdEndRenderPass(s_state.commandBuffers[i]);
 
@@ -575,12 +633,14 @@ EngineError VulkanHandler::createGraphicPipeline(){
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
+    auto bindingDescription = VertexData::getBindingDescription();
+    auto attributeDescriptions = VertexData::getAttributeDescriptions();
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription; // Optional
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // Optional
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -1260,4 +1320,16 @@ static EngineError createShaderModule(const std::vector<char>& code, VkShaderMod
     }
 
     return EngineError::Ok;
+}
+static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(s_state.physical_devices.cbegin()->device, &memProperties);
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+
+    throw std::runtime_error("failed to find suitable memory type!");
 }

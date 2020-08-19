@@ -22,6 +22,7 @@
 #include <mutex>
 #include <functional>
 #include <array>
+#include <list>
 //TODO: fare solo engine singleton, se ho bisogno di altri singleton evito e li faccio friend di engine con ctor privato e niente copy o move
 
 //TODO: use glad for opengl extensions. https://www.glfw.org/docs/latest/context_guide.html#context_glext
@@ -146,7 +147,7 @@ private: RenderingManager();
     static void windowMaximizeCallback(GLFWwindow* window, int maximized);
     static void windowContentScaleCallback(GLFWwindow* window, float xscale, float yscale);
 private:
-    std::vector<GLFWwindow*> m_windows;
+    std::list<GLFWwindow*> m_windows;
     //TODO: use mutexes for non threadsafe ops if needed
     bool m_initialized;
     bool m_contextInitialized;

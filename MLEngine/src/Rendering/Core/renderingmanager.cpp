@@ -150,8 +150,8 @@ EngineError RenderingManager::getWindowContextRobustness(const WindowShareData& 
 }
 EngineError RenderingManager::release(){
     if(m_initialized){
+        Engine::instance().console().log("Releasing rendering resources...", Console::getHighestPriorityClassification());
         m_initialized = !m_initialized;
-        m_renderingContextType = RenderingContextType::None;
         if(m_contextInitialized){
             m_contextInitialized = !m_contextInitialized;
             switch (getRenderingContextType())
@@ -162,7 +162,7 @@ EngineError RenderingManager::release(){
                 break;
             }
         }
-        
+        m_renderingContextType = RenderingContextType::None;
         glfwTerminate();
     }
     return EngineError::Ok;            
@@ -300,8 +300,8 @@ EngineError RenderingManager::singleLoop(){
     VulkanHandler::advanceLoggerTime(Engine::instance().frameTime().getLastFrameTime());
     if(m_run){
         std::stack<GLFWwindow*> windows_to_remove;
-        for(size_t i = 0; i < m_windows.size(); ++i){
-            GLFWwindow* current_window = m_windows[i];
+        for(const auto& current_window : m_windows){
+            //GLFWwindow* current_window = m_windows[i];
 
             //Make the window's context current
             //glfwMakeContextCurrent(current_window);
@@ -321,14 +321,20 @@ EngineError RenderingManager::singleLoop(){
             }
         }
 
-        for(auto it = m_windows.crbegin(); it != m_windows.crend() && windows_to_remove.size() != 0; ++it){
+        for(auto it = m_windows.cbegin(); it != m_windows.cend() && windows_to_remove.size() != 0;){
             GLFWwindow* to_remove = windows_to_remove.top();
+            auto temp_it = it;
+            temp_it++;
             if(to_remove == *it){
                 windows_to_remove.pop();
-                glfwDestroyWindow(to_remove);
+                glfwDestroyWindow(to_remove);    
+                m_windows.erase(it);
             }
+            it = temp_it;
         }
-        return EngineError::Ok;
+        if(m_windows.size()){
+            return EngineError::Ok;
+        }
     }else{
         for(auto it = m_windows.cbegin(); it != m_windows.cend(); ++it){
             GLFWwindow* current_window = *it;

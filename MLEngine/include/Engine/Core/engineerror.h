@@ -70,6 +70,7 @@ enum class EngineError{ //TODO: test these values so that if values of glfw ever
     VK_FailedToEndCommandBuffer = -1000011018,
     VK_FailedCreateSyncObjects = -1000011019,
     VK_FailedToSubmitDrawCommandBuffer = -1000011020,
+    VK_FailedCreateBuffer = -1000011021,
 
     //The rendering loop has been stopped by setting the relative flag to false.
     Stopped = 0x01000000,
