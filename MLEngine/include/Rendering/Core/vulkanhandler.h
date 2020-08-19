@@ -13,11 +13,12 @@
 namespace mle{
 class MLENGINE_SHARED_EXPORT VulkanHandler{
 public:
-    static EngineError initialize(const ContextInitData& data, const uint32_t width, const uint32_t height);
+    static EngineError initialize(const ContextInitData& data);
     static EngineError release();
     static EngineError addExtension(const std::string& ext);
     static bool isExtensionLoaded(const std::string& ext);
     static void advanceLoggerTime(const double timeToAdd);
+    static void notifyFramebufferResized();
 
     static void waitForDeviceIdle();
 
@@ -30,7 +31,7 @@ private: VulkanHandler() = delete;
     static EngineError setupPhysicalDevices(const ContextInitData& context_data);
     static EngineError setupLogicalDevices(const ContextInitData& context_data);
     static EngineError createSurface(const ContextInitData& context_data);
-    static EngineError createSwapChain(const uint32_t width, const uint32_t height);
+    static EngineError createSwapChain();
     static EngineError createImageViews();
     static EngineError createRenderPass();
     static EngineError createGraphicPipeline();
@@ -38,6 +39,9 @@ private: VulkanHandler() = delete;
     static EngineError createCommandPool();
     static EngineError createCommandBuffers();
     static EngineError createSyncObjects();
+
+    static EngineError recreateSwapChain();
+    static EngineError cleanupSwapChain();
 };
 };
 

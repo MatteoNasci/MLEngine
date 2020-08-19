@@ -84,6 +84,8 @@ struct VulkanData{
     std::vector<VkFence> imagesInFlight;
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
+    std::optional<ContextInitData> context_data;
+    bool framebufferResized = false;
 
     std::unordered_map<std::string, void(*)(void)> extensions_available;
 
@@ -130,7 +132,7 @@ static const bool isDeviceExtensionSupported(const ContextInitData& context_data
 static EngineError querySwapChainSupport(const VkPhysicalDevice& device, SwapChainSupportDetails& out_details);
 static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 static VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-static VkExtent2D chooseSwapExtent(const uint32_t width, const uint32_t height, const VkSurfaceCapabilitiesKHR& capabilities);
+static VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
 static EngineError createShaderModule(const std::vector<char>& code, VkShaderModule& out_module);
 
 //temp
@@ -164,7 +166,7 @@ EngineError VulkanHandler::addExtension(const std::string& ext){
 bool VulkanHandler::isExtensionLoaded(const std::string& ext){
     return s_state.extensions_available.count(ext);
 }
-EngineError VulkanHandler::initialize(const ContextInitData& context_data, const uint32_t width, const uint32_t height){
+EngineError VulkanHandler::initialize(const ContextInitData& context_data){
     waitForLoggingAndLog("first");
 
     std::vector<const char*> extensions;
@@ -202,7 +204,9 @@ waitForLoggingAndLog("seventh");
     auto setupLogicalDevicesError = setupLogicalDevices(context_data);
 waitForLoggingAndLog("eighth");
 
-    auto createSwapChainError = createSwapChain(width, height);
+    s_state.context_data = context_data;
+
+    auto createSwapChainError = createSwapChain();
 waitForLoggingAndLog("ninth");
 
     auto createImagesError = createImageViews();
@@ -250,35 +254,7 @@ EngineError VulkanHandler::release(){
         }
         s_state.commandPool.reset();
 
-        for(size_t i = 0; i < s_state.swapChainFramebuffers.size(); ++i){
-            vkDestroyFramebuffer(s_state.logical_device.value().device, s_state.swapChainFramebuffers[i], nullptr);
-        }
-        s_state.swapChainFramebuffers.clear();
-
-        if(s_state.graphicsPipeline.has_value()){
-            vkDestroyPipeline(s_state.logical_device.value().device, s_state.graphicsPipeline.value(), nullptr);
-        }
-        s_state.graphicsPipeline.reset();
-
-        if(s_state.pipelineLayout.has_value()){
-            vkDestroyPipelineLayout(s_state.logical_device.value().device, s_state.pipelineLayout.value(), nullptr);
-        }
-        s_state.pipelineLayout.reset();
-
-        if(s_state.renderPass.has_value()){
-            vkDestroyRenderPass(s_state.logical_device.value().device, s_state.renderPass.value(), nullptr);
-        }
-        s_state.renderPass.reset();
-
-        for(size_t i = 0; i < s_state.swapChainImageViews.size(); ++i){
-            vkDestroyImageView(s_state.logical_device.value().device, s_state.swapChainImageViews[i], nullptr);
-        }
-        s_state.swapChainImageViews.clear();
-
-        if(s_state.swap_chain.has_value()){
-            vkDestroySwapchainKHR(s_state.logical_device.value().device, s_state.swap_chain.value(), nullptr);
-        }
-        s_state.swap_chain.reset();
+        cleanupSwapChain();
 
         vkDestroyDevice(s_state.logical_device.value().device, nullptr);
     }
@@ -305,7 +281,46 @@ EngineError VulkanHandler::release(){
     }
     s_state.instance.reset();
 
+    s_state.context_data.reset();
+
     waitForLogging();
+
+    return EngineError::Ok;
+}
+EngineError VulkanHandler::cleanupSwapChain(){
+    if(s_state.logical_device.has_value()){
+        for(size_t i = 0; i < s_state.swapChainFramebuffers.size(); ++i){
+            vkDestroyFramebuffer(s_state.logical_device.value().device, s_state.swapChainFramebuffers[i], nullptr);
+        }
+        s_state.swapChainFramebuffers.clear();
+
+        vkFreeCommandBuffers(s_state.logical_device.value().device, s_state.commandPool.value(), static_cast<uint32_t>(s_state.commandBuffers.size()), s_state.commandBuffers.data());
+
+        if(s_state.graphicsPipeline.has_value()){
+            vkDestroyPipeline(s_state.logical_device.value().device, s_state.graphicsPipeline.value(), nullptr);
+        }
+        s_state.graphicsPipeline.reset();
+
+        if(s_state.pipelineLayout.has_value()){
+            vkDestroyPipelineLayout(s_state.logical_device.value().device, s_state.pipelineLayout.value(), nullptr);
+        }
+        s_state.pipelineLayout.reset();
+
+        if(s_state.renderPass.has_value()){
+            vkDestroyRenderPass(s_state.logical_device.value().device, s_state.renderPass.value(), nullptr);
+        }
+        s_state.renderPass.reset();
+
+        for(size_t i = 0; i < s_state.swapChainImageViews.size(); ++i){
+            vkDestroyImageView(s_state.logical_device.value().device, s_state.swapChainImageViews[i], nullptr);
+        }
+        s_state.swapChainImageViews.clear();
+
+        if(s_state.swap_chain.has_value()){
+            vkDestroySwapchainKHR(s_state.logical_device.value().device, s_state.swap_chain.value(), nullptr);
+        }
+        s_state.swap_chain.reset();
+    }
 
     return EngineError::Ok;
 }
@@ -345,7 +360,30 @@ Hopefully someone will find this helpful.
 
 
 
+void VulkanHandler::notifyFramebufferResized(){
+    s_state.framebufferResized = true;
+}
+EngineError VulkanHandler::recreateSwapChain(){
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(s_state.context_data.value().window.window, &width, &height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(s_state.context_data.value().window.window, &width, &height);
+        glfwWaitEvents();
+    }
 
+    vkDeviceWaitIdle(s_state.logical_device.value().device);
+
+    cleanupSwapChain();
+
+    createSwapChain();
+    createImageViews();
+    createRenderPass();
+    createGraphicPipeline();
+    createFrameBuffers();
+    createCommandBuffers();
+
+    return EngineError::Ok;
+}
 void VulkanHandler::waitForDeviceIdle(){
     vkDeviceWaitIdle(s_state.logical_device.value().device);
 }
@@ -353,8 +391,13 @@ EngineError VulkanHandler::drawFrame(){
     vkWaitForFences(s_state.logical_device.value().device, 1, &s_state.inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(s_state.logical_device.value().device, s_state.swap_chain.value(), UINT64_MAX, s_state.imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    const auto acquireResult = static_cast<EngineError>(vkAcquireNextImageKHR(s_state.logical_device.value().device, s_state.swap_chain.value(), UINT64_MAX, s_state.imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex));
 
+    if (acquireResult == EngineError::VK_ErrorOutOfDateKHR) {      
+        return recreateSwapChain();
+    } else if (acquireResult != EngineError::Ok && acquireResult != EngineError::VK_SuboptimalKHR) {
+        return acquireResult;
+    }
     // Check if a previous frame is using this image (i.e. there is its fence to wait on)
     if (s_state.imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
         vkWaitForFences(s_state.logical_device.value().device, 1, &s_state.imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
@@ -395,11 +438,15 @@ EngineError VulkanHandler::drawFrame(){
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr; // Optional, needed to check for error with each individual swapchain when there are more than one
 
-    vkQueuePresentKHR(s_state.logical_device.value().presentQueue, &presentInfo);
+    auto presentResult = static_cast<EngineError>(vkQueuePresentKHR(s_state.logical_device.value().presentQueue, &presentInfo));
+    if (presentResult == EngineError::VK_ErrorOutOfDateKHR || presentResult == EngineError::VK_SuboptimalKHR || s_state.framebufferResized) {
+        s_state.framebufferResized = false;
+        presentResult = recreateSwapChain();
+    }
 
     currentFrame = (currentFrame + 1) % MaxFramesInFlight;
 
-    return EngineError::Ok;
+    return presentResult;
 }
 EngineError VulkanHandler::createSyncObjects(){
     s_state.imageAvailableSemaphores.resize(MaxFramesInFlight);
@@ -764,14 +811,14 @@ EngineError VulkanHandler::createSurface(const ContextInitData& context_data){
     s_state.surface = surface;
     return EngineError::Ok;
 }
-EngineError VulkanHandler::createSwapChain(const uint32_t width, const uint32_t height){
+EngineError VulkanHandler::createSwapChain(){
     const auto& physicalDevice = *(s_state.physical_devices.cbegin());
     SwapChainSupportDetails swapChainSupport;
     auto chainSupportError = querySwapChainSupport(physicalDevice.device, swapChainSupport);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-    VkExtent2D extent = chooseSwapExtent(width, height, swapChainSupport.capabilities);
+    VkExtent2D extent = chooseSwapExtent(s_state.context_data.value().window.window, swapChainSupport.capabilities);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1; //we may sometimes have to wait on the driver to complete internal operations before we can acquire another image to render to. Therefore it is recommended to request at least one more image than the minimum
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -917,11 +964,13 @@ static VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR
     }
     return VK_PRESENT_MODE_FIFO_KHR;
 }
-static VkExtent2D chooseSwapExtent(const uint32_t width, const uint32_t height, const VkSurfaceCapabilitiesKHR& capabilities) {
+static VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities) {
     if (capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
     } else {
-        VkExtent2D actualExtent = {width, height};
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        VkExtent2D actualExtent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
 
         actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
         actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));

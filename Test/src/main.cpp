@@ -33,7 +33,7 @@ int main(int argc, char** argv){  //TODO: check hoe much std::function impacts p
     try
     {  
         mle::WindowHintsData window_hints = mle::WindowHintsData();
-        window_hints.resizable = false;
+        window_hints.resizable = true;
         window_hints.client_api = ClientApi::None;
         window_hints.try_use_vulkan = true;
         ContextInitData context_data;

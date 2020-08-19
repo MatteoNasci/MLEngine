@@ -278,7 +278,7 @@ EngineError RenderingManager::addWindow(const std::string& title, const int widt
             bool vulkan_supported;
             isVulkanSupported(vulkan_supported);
             if(hints_data.try_use_vulkan && hints_data.client_api == ClientApi::None && vulkan_supported){
-                VulkanHandler::initialize(context_data, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+                VulkanHandler::initialize(context_data);
                 m_renderingContextType = RenderingContextType::Vulkan;
             }
             else{
@@ -487,7 +487,7 @@ EngineError RenderingManager::setSwapInterval(const int interval) const{
 }
 
 void RenderingManager::framebufferSizeCallback(GLFWwindow* window, int width, int height){
-
+    VulkanHandler::notifyFramebufferResized();
 }
 void RenderingManager::errorCallback(int code, const char* desc){
     const EngineError engine_code = EngineErrorHelper::convertFromInternalError(code);
