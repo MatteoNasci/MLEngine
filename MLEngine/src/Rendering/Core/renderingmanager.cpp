@@ -308,6 +308,9 @@ EngineError RenderingManager::singleLoop(){
 
             //Render here
             glClear(GL_COLOR_BUFFER_BIT);
+
+            VulkanHandler::drawFrame();
+
             //Swap buffers
             //glfwSwapBuffers(current_window);  //TODO: do simila thing of poolevents, use enum m_RenderingContextType to determine what to do here
             //Poll and process events
@@ -336,6 +339,7 @@ EngineError RenderingManager::singleLoop(){
 
         m_windows.clear();
     }
+    VulkanHandler::waitForDeviceIdle();
     return EngineError::Stopped;
 }
 EngineError RenderingManager::getWindowCurrentMonitor(const WindowShareData& window, MonitorHandle& out_monitor) const{

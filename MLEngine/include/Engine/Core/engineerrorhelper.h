@@ -25,7 +25,7 @@ public:
         return error <= EngineError::NoWindowContext && error >= EngineError::NotInitialized;
     }
     inline static bool isErrorVk(const EngineError error){
-        return (error <= EngineError::VK_Incomplete && error >= EngineError::VK_NotReady) || (error <= EngineError::VK_ErrorOutOfHostMemory && error >= EngineError::VK_SwapChainNotCreated);
+        return (error <= EngineError::VK_Incomplete && error >= EngineError::VK_NotReady) || (error <= EngineError::VK_ErrorOutOfHostMemory && error >= EngineError::VK_FailedToSubmitDrawCommandBuffer);
     }
     inline static bool isErrorOther(const EngineError error){
         return !isErrorGlfw(error) && !isErrorVk(error);

@@ -19,6 +19,10 @@ public:
     static bool isExtensionLoaded(const std::string& ext);
     static void advanceLoggerTime(const double timeToAdd);
 
+    static void waitForDeviceIdle();
+
+    static EngineError drawFrame();
+
 private: VulkanHandler() = delete;
     static EngineError checkPreInit(const ContextInitData& context_data, std::vector<const char*>& out_extensions);
     static EngineError createInstance(const ContextInitData& context_data, const std::vector<const char*>& extensions);
@@ -27,6 +31,13 @@ private: VulkanHandler() = delete;
     static EngineError setupLogicalDevices(const ContextInitData& context_data);
     static EngineError createSurface(const ContextInitData& context_data);
     static EngineError createSwapChain(const uint32_t width, const uint32_t height);
+    static EngineError createImageViews();
+    static EngineError createRenderPass();
+    static EngineError createGraphicPipeline();
+    static EngineError createFrameBuffers();
+    static EngineError createCommandPool();
+    static EngineError createCommandBuffers();
+    static EngineError createSyncObjects();
 };
 };
 

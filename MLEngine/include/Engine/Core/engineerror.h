@@ -58,9 +58,22 @@ enum class EngineError{ //TODO: test these values so that if values of glfw ever
     VK_NoSurfaceCreated = -1000011006,
     VK_NoSuitableQueueFamilyFound = -1000011007,
     VK_SwapChainNotCreated = -1000011008,
+    VK_ImageViewNotCreated = -1000011009,
+    VK_FailedCreatingShaderModule = -1000011010,
+    VK_FailedCreatePipelineLayout = -1000011011,
+    VK_FailedCreateRenderPass = -1000011012,
+    VK_FailedCreatePipeline = -1000011013,
+    VK_FailedCreateFrameBuffers = -1000011014,
+    VK_FailedCreateCommandPool = -1000011015,
+    VK_FailedCreateCommandBuffers = -1000011016,
+    VK_FailedToBeginCommandBuffer = -1000011017,
+    VK_FailedToEndCommandBuffer = -1000011018,
+    VK_FailedCreateSyncObjects = -1000011019,
+    VK_FailedToSubmitDrawCommandBuffer = -1000011020,
 
     //The rendering loop has been stopped by setting the relative flag to false.
-    Stopped,
+    Stopped = 0x01000000,
+    FileCouldNotBeOpened,
 };
 };
 #endif

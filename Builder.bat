@@ -6,6 +6,12 @@ rmdir /s /q build
 mkdir build
 
 :StartBuild
+
+cd MLEngine/shaders/
+START compile.bat
+cd ..
+cd ..
+
 cd build
 cmake ../
 cmake --build . --config Release

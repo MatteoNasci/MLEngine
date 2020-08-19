@@ -1,10 +1,10 @@
 # Prerequisites
 *.d
 
-#VisualStudio Code
+# VisualStudio Code
 .vscode/
 
-#Build
+# Build
 build/
 
 # Compiled Object files
@@ -12,6 +12,9 @@ build/
 *.lo
 *.o
 *.obj
+
+# Compiled shaders
+*.spv
 
 # Precompiled Headers
 *.gch
