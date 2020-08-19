@@ -134,16 +134,13 @@ static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFor
 static VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 static VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
 static EngineError createShaderModule(const std::vector<char>& code, VkShaderModule& out_module);
+static void waitForLogging();
 
-//temp
+
 static void waitForLogging(){
     while(s_logger.console.isLoggingToFile()){
-        VulkanHandler::advanceLoggerTime(1);
+        VulkanHandler::advanceLoggerTime(10);
     }
-}
-static void waitForLoggingAndLog(const std::string& log){
-    s_logger.console.log(log, Console::getHighestPriorityClassification());
-    waitForLogging();
 }
 
 
@@ -167,69 +164,49 @@ bool VulkanHandler::isExtensionLoaded(const std::string& ext){
     return s_state.extensions_available.count(ext);
 }
 EngineError VulkanHandler::initialize(const ContextInitData& context_data){
-    waitForLoggingAndLog("first");
-
     std::vector<const char*> extensions;
     auto preInitError = checkPreInit(context_data, extensions);
     if(preInitError != EngineError::Ok){
         return preInitError;
     }
-    waitForLoggingAndLog("second");
 
     auto createInstanceError = createInstance(context_data, extensions);
     if(createInstanceError != EngineError::Ok){
-        waitForLoggingAndLog("Failed third with " + std::to_string(static_cast<int>(createInstanceError)));
         return createInstanceError;
     }
-    waitForLoggingAndLog("third");
 
     auto savingAdressedError = saveAvailableExtensions(s_extensionsToAdd);
     s_extensionsToAdd.clear();
 
-    waitForLoggingAndLog("fourth");
-
     auto createSurfaceError = createSurface(context_data);
-waitForLoggingAndLog("fifth");
     
     auto settingDebugMessengersError = setupDebugMessengers(context_data);
-waitForLoggingAndLog("sixth");
 
     auto setupPhysicalDevicesError = setupPhysicalDevices(context_data);
     if(setupPhysicalDevicesError != EngineError::Ok){
-        waitForLoggingAndLog("Failed seventh with " + std::to_string(static_cast<int>(setupPhysicalDevicesError)));
         return setupPhysicalDevicesError;
     }
-waitForLoggingAndLog("seventh");
 
     auto setupLogicalDevicesError = setupLogicalDevices(context_data);
-waitForLoggingAndLog("eighth");
 
     s_state.context_data = context_data;
 
     auto createSwapChainError = createSwapChain();
-waitForLoggingAndLog("ninth");
 
     auto createImagesError = createImageViews();
-waitForLoggingAndLog("tenth");
 
     auto createRenderPassError = createRenderPass();
-waitForLoggingAndLog("eleventh");
 
     auto createGraphicPipelineError = createGraphicPipeline();
-    waitForLoggingAndLog("twelbvdvd");
 
     auto createFrameBuffersError = createFrameBuffers();
-    waitForLoggingAndLog("thirteeeen");
 
     auto createCommandPoolError = createCommandPool();
-    waitForLoggingAndLog("fourtheenertty");
 
     auto createCommandBuffersError = createCommandBuffers();
-    waitForLoggingAndLog("fiftheendnf");
 
     auto createSemaphoresError = createSyncObjects();
 
-    waitForLoggingAndLog("Successfull Vulkan init! Created");
     return EngineError::Ok;
 }
 EngineError VulkanHandler::release(){
@@ -263,7 +240,7 @@ EngineError VulkanHandler::release(){
             vkDestroyPipelineLayout(s_state.logical_device.value().device, s_state.pipelineLayout.value(), nullptr);
         }
         s_state.pipelineLayout.reset();
-        
+
         cleanupSwapChain();
 
         vkDestroyDevice(s_state.logical_device.value().device, nullptr);
@@ -283,7 +260,7 @@ EngineError VulkanHandler::release(){
                 destroyer(s_state.instance.value(), element, nullptr);
             }
         }else{
-            waitForLoggingAndLog("Vulkan could not find the required extension to use to delete created debug messengers!");
+            s_logger.console.log("Vulkan could not find the required extension to use to delete created debug messengers!", Console::getHighestPriorityClassification());
         }
         s_state.debugMessengers.clear();
 
@@ -913,8 +890,6 @@ EngineError VulkanHandler::setupLogicalDevices(const ContextInitData& context_da
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
 
-    waitForLoggingAndLog(context_data.vulkan_logical_device_extensions[0]);
-    waitForLoggingAndLog(std::to_string(context_data.vulkan_logical_device_extensions.size()));
     createInfo.ppEnabledExtensionNames = context_data.vulkan_logical_device_extensions.data();
     createInfo.enabledExtensionCount = static_cast<uint32_t>(context_data.vulkan_logical_device_extensions.size());
 
@@ -1055,22 +1030,18 @@ static double isPhysicalDeviceSuitable(const ContextInitData& context_data, cons
     auto findQueueFamilyError = findQueueFamilies(device, surface, out_queueFamily);
 
     if(findQueueFamilyError != EngineError::Ok){
-        waitForLoggingAndLog("Failed find family queue");
         return invalid_return_value;
     }
     if(!out_f.geometryShader){
-        waitForLoggingAndLog("Failed geometry shader");
         return invalid_return_value;
     }
     if(!isDeviceExtensionSupported(context_data, device)){
-        waitForLoggingAndLog("Failed extension supported");
         return invalid_return_value;
     }
 
     SwapChainSupportDetails swapChainSupport;
     auto querySwapChainError = querySwapChainSupport(device, swapChainSupport);
     if(swapChainSupport.formats.empty() || swapChainSupport.presentModes.empty() || querySwapChainError != EngineError::Ok){
-        waitForLoggingAndLog("Failed swapchain support");
         return invalid_return_value;
     }
 
@@ -1135,9 +1106,9 @@ EngineError VulkanHandler::createInstance(const ContextInitData& context_data, c
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
-    waitForLoggingAndLog("Enabled exts...");
+    s_logger.console.log("Enabled exts...", Console::getHighestPriorityClassification());
     for(size_t i = 0; i < extensions.size(); ++i){
-        waitForLoggingAndLog(extensions[i]);
+        s_logger.console.log(extensions[i], Console::getHighestPriorityClassification());
     }
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     createInfo.ppEnabledExtensionNames = extensions.data();
@@ -1162,23 +1133,18 @@ EngineError VulkanHandler::createInstance(const ContextInitData& context_data, c
 
     s_state.instance = instance;
 
-    waitForLoggingAndLog("Successfull Vulkan init!");
     return EngineError::Ok;
 }
 EngineError VulkanHandler::checkPreInit(const ContextInitData& context_data, std::vector<const char*>& out_extensions){
     const EngineError vulkan_result = checkVulkanExtensionsValidity((context_data.vulkan_use_layers ? context_data.vulkan_layers : std::vector<const char*>()), s_availableExtensions);
-    waitForLoggingAndLog("Checking for Vulkan with result code: " + std::to_string(static_cast<int>(vulkan_result)));
     if(vulkan_result !=EngineError::Ok){
         return vulkan_result;
     }
-
-    waitForLoggingAndLog("Initializing Vulkan with extensions:");
 
     out_extensions.resize(s_availableExtensions.size());
     for(size_t i = 0; i < s_availableExtensions.size(); ++i){
         const VkExtensionProperties& prop = s_availableExtensions[i];
         out_extensions[i] = prop.extensionName;
-        waitForLoggingAndLog(prop.extensionName + std::string(", version: ") + std::to_string(prop.specVersion));
     } 
 
     return EngineError::Ok;
@@ -1188,7 +1154,6 @@ static EngineError getAndClearGlfwError(){
     return static_cast<EngineError>(glfwGetError(s));
 }
 static EngineError saveAvailableExtensions(const std::set<std::string>& extensions){
-    waitForLoggingAndLog("saving: " + extensions.size());
     for(const auto& name : extensions){       
         if(s_state.extensions_available.count(name)){
             continue;
@@ -1197,11 +1162,10 @@ static EngineError saveAvailableExtensions(const std::set<std::string>& extensio
         auto address = vkGetInstanceProcAddr(s_state.instance.value(), name.c_str());
         const char ** s = nullptr;
         if(address == nullptr){
-            waitForLoggingAndLog("Failed to retrieve vulkan extension: " + name + std::string(" With error: ") + std::to_string(glfwGetError(s)));
+            s_logger.console.log("Failed to retrieve vulkan extension: " + name + std::string(" With error: ") + std::to_string(glfwGetError(s)), Console::getHighestPriorityClassification());
             continue;
         }
 
-        waitForLoggingAndLog("Saving func: " + name);
         s_state.extensions_available[name] = address;
     }
 
@@ -1273,7 +1237,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
     void* pUserData){
     
     //TODO: print a representation of other arguments too
-    waitForLoggingAndLog("Vulkan validation layer: " + std::string(pCallbackData->pMessage));
+    s_logger.console.log("Vulkan validation layer: " + std::string(pCallbackData->pMessage), Console::getHighestPriorityClassification());
 
     return VK_FALSE;
 }
