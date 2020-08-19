@@ -254,6 +254,16 @@ EngineError VulkanHandler::release(){
         }
         s_state.commandPool.reset();
 
+        if(s_state.graphicsPipeline.has_value()){
+            vkDestroyPipeline(s_state.logical_device.value().device, s_state.graphicsPipeline.value(), nullptr);
+        }
+        s_state.graphicsPipeline.reset();
+
+        if(s_state.pipelineLayout.has_value()){
+            vkDestroyPipelineLayout(s_state.logical_device.value().device, s_state.pipelineLayout.value(), nullptr);
+        }
+        s_state.pipelineLayout.reset();
+        
         cleanupSwapChain();
 
         vkDestroyDevice(s_state.logical_device.value().device, nullptr);
@@ -295,16 +305,6 @@ EngineError VulkanHandler::cleanupSwapChain(){
         s_state.swapChainFramebuffers.clear();
 
         vkFreeCommandBuffers(s_state.logical_device.value().device, s_state.commandPool.value(), static_cast<uint32_t>(s_state.commandBuffers.size()), s_state.commandBuffers.data());
-
-        if(s_state.graphicsPipeline.has_value()){
-            vkDestroyPipeline(s_state.logical_device.value().device, s_state.graphicsPipeline.value(), nullptr);
-        }
-        s_state.graphicsPipeline.reset();
-
-        if(s_state.pipelineLayout.has_value()){
-            vkDestroyPipelineLayout(s_state.logical_device.value().device, s_state.pipelineLayout.value(), nullptr);
-        }
-        s_state.pipelineLayout.reset();
 
         if(s_state.renderPass.has_value()){
             vkDestroyRenderPass(s_state.logical_device.value().device, s_state.renderPass.value(), nullptr);
@@ -378,7 +378,6 @@ EngineError VulkanHandler::recreateSwapChain(){
     createSwapChain();
     createImageViews();
     createRenderPass();
-    createGraphicPipeline();
     createFrameBuffers();
     createCommandBuffers();
 
@@ -510,6 +509,20 @@ EngineError VulkanHandler::createCommandBuffers(){
 
         vkCmdBindPipeline(s_state.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, s_state.graphicsPipeline.value());
 
+        VkViewport viewport{}; //Represents the window rect portion where the image will be seen
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(s_state.swapChainExtent.width);
+        viewport.height = static_cast<float>(s_state.swapChainExtent.height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(s_state.commandBuffers[i], 0, 1, &viewport);
+
+        VkRect2D scissor{}; //represents the image rect portion that will be displayed
+        scissor.offset = {0, 0};
+        scissor.extent = s_state.swapChainExtent;
+        vkCmdSetScissor(s_state.commandBuffers[i], 0, 1, &scissor);
+
         vkCmdDraw(s_state.commandBuffers[i], 3, 1, 0, 0);
 
         vkCmdEndRenderPass(s_state.commandBuffers[i]);
@@ -597,7 +610,7 @@ EngineError VulkanHandler::createGraphicPipeline(){
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    VkViewport viewport{}; //Represents the window rect portion where the image will be seen
+    /*VkViewport viewport{}; //Represents the window rect portion where the image will be seen
     viewport.x = 0.0f;
     viewport.y = 0.0f;
     viewport.width = static_cast<float>(s_state.swapChainExtent.width);
@@ -607,14 +620,14 @@ EngineError VulkanHandler::createGraphicPipeline(){
 
     VkRect2D scissor{}; //represents the image rect portion that will be displayed
     scissor.offset = {0, 0};
-    scissor.extent = s_state.swapChainExtent;
+    scissor.extent = s_state.swapChainExtent;*/ //commented now since we use dynamic states
 
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.viewportCount = 1;
-    viewportState.pViewports = &viewport;
+    viewportState.pViewports = nullptr;//&viewport;
     viewportState.scissorCount = 1;
-    viewportState.pScissors = &scissor;
+    viewportState.pScissors = nullptr;//&scissor;
 
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -672,7 +685,7 @@ EngineError VulkanHandler::createGraphicPipeline(){
 
     VkDynamicState dynamicStates[] = {
         VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_LINE_WIDTH
+        VK_DYNAMIC_STATE_SCISSOR
     };
 
     VkPipelineDynamicStateCreateInfo dynamicState{};
@@ -705,7 +718,7 @@ EngineError VulkanHandler::createGraphicPipeline(){
         pipelineInfo.pMultisampleState = &multisampling;
         pipelineInfo.pDepthStencilState = nullptr; // Optional
         pipelineInfo.pColorBlendState = &colorBlending;
-        pipelineInfo.pDynamicState = nullptr; // Optional
+        pipelineInfo.pDynamicState = &dynamicState; // Optional
 
         pipelineInfo.layout = s_state.pipelineLayout.value();
 
