@@ -23,6 +23,7 @@ set(GLFW_ROOT ${MLEngine_EXT_ROOT}/Glfw/)
 set(GLFW_INCLUDE_ROOT ${GLFW_ROOT}/include/)
 set(VULKAN_INCLUDE_ROOT ${VULKAN_SDK_ROOT}/Include/)
 set(GML_INCLUDE_ROOT ${MLEngine_EXT_ROOT}/glm-0.9.9.8/glm/)
+set(TINYOBJLOADER_INCLUDE_ROOT ${MLEngine_EXT_ROOT}/tinyobjloader/)
 set(STB_INCLUDE_ROOT ${MLEngine_EXT_ROOT}/stb/)
 set(GLFW_LIBS_ROOT ${GLFW_ROOT}/build/src/)
 
@@ -30,7 +31,7 @@ set(BUILD_MLENGINE_STATIC TRUE)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/mlengineconfig.h.in ${MLEngine_INCLUDE_ROOT}/mlengineconfig.h)
 
-set(MLEngine_LIBS opengl32 ${VULKAN_SDK_ROOT}/Lib/vulkan-1.lib)
+set(MLEngine_LIBS opengl32)
 
 # Add source files
 file(GLOB_RECURSE SOURCE_FILES 
@@ -49,12 +50,13 @@ add_library(MLEngine SHARED
 endif()
 
 target_link_libraries(MLEngine PRIVATE general ${MLEngine_LIBS})
+target_link_libraries(MLEngine PUBLIC general ${VULKAN_SDK_ROOT}/Lib/vulkan-1.lib)
 target_link_libraries(MLEngine PRIVATE debug ${GLFW_LIBS_ROOT}/Debug/glfw3.lib)
 target_link_libraries(MLEngine PRIVATE optimized ${GLFW_LIBS_ROOT}/Release/glfw3.lib)
 
 target_compile_definitions(MLEngine PRIVATE MLENGINE_LIBRARY)
-target_include_directories(MLEngine PRIVATE "${GLFW_INCLUDE_ROOT}" "${VULKAN_INCLUDE_ROOT}")
-target_include_directories(MLEngine PUBLIC "${GML_INCLUDE_ROOT}" "${MLEngine_INCLUDE_ROOT}" "${STB_INCLUDE_ROOT}")
+target_include_directories(MLEngine PRIVATE "${GLFW_INCLUDE_ROOT}")
+target_include_directories(MLEngine PUBLIC "${GML_INCLUDE_ROOT}" "${MLEngine_INCLUDE_ROOT}" "${STB_INCLUDE_ROOT}" "${TINYOBJLOADER_INCLUDE_ROOT}" "${VULKAN_INCLUDE_ROOT}")
 
 #Copy libraries
 if(WIN32)

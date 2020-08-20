@@ -20,6 +20,10 @@ build/
 *.jpg
 *.png
 
+# Models
+*.obj
+*.fbx
+
 # Precompiled Headers
 *.gch
 *.pch

@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
 #include <Engine/Debug/console.h>
 #include <Engine/Time/timermanager.h>
@@ -31,6 +33,9 @@ struct VertexData{
     glm::vec3 pos;
     glm::vec3 color;
     glm::vec2 texCoord;
+    bool operator==(const VertexData& other) const {
+        return pos == other.pos && color == other.color && texCoord == other.texCoord;
+    }
     static VkVertexInputBindingDescription getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 0;
@@ -59,6 +64,15 @@ struct VertexData{
         return attributeDescriptions;
     }
 };
+namespace std {
+    template<> struct hash<VertexData> {
+        size_t operator()(VertexData const& vertex) const {
+            return ((hash<glm::vec3>()(vertex.pos) ^
+                   (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+                   (hash<glm::vec2>()(vertex.texCoord) << 1);
+        }
+    };
+}
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
@@ -170,7 +184,7 @@ static Logger s_logger;
 static VulkanData s_state;
 static size_t currentFrame = 0;
 
-static const std::vector<VertexData> vertices = {
+static std::vector<VertexData> vertices = {
     {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
     {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
     {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
@@ -182,7 +196,7 @@ static const std::vector<VertexData> vertices = {
     {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 };
 
-static const std::vector<uint16_t> indices = {
+static std::vector<uint32_t> indices = {
     0, 1, 2, 2, 3, 0,
     4, 5, 6, 6, 7, 4
 };
@@ -207,7 +221,6 @@ static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFor
 static VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 static VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities);
 static EngineError createShaderModule(const std::vector<char>& code, VkShaderModule& out_module);
-static void waitForLogging();
 static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 static EngineError createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 static EngineError copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
@@ -317,6 +330,8 @@ EngineError VulkanHandler::initialize(const ContextInitData& context_data){
     auto createTextureImageViewError = createTextureImageView();
 
     auto createTextureSamplerError = createTextureSampler();
+
+    auto loadModelError = loadModel();
 
     auto createVertexBufferError = createVertexBuffer();
 
@@ -507,7 +522,48 @@ EngineError VulkanHandler::cleanupSwapChain(){
 
 
 
+EngineError VulkanHandler::loadModel(){
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
 
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "D:/Personal/MLEngine/MLEngine/models/viking_room.obj")) {
+        throw std::runtime_error(warn + err);
+    }
+
+    vertices.clear();
+    indices.clear();
+
+    std::unordered_map<VertexData, uint32_t> uniqueVertices{};
+
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            VertexData vertex{};
+
+            vertex.pos = {
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            };
+
+            vertex.texCoord = {
+                attrib.texcoords[2 * index.texcoord_index + 0],
+                attrib.texcoords[2 * index.texcoord_index + 1]
+            };
+
+            vertex.color = {1.0f, 1.0f, 1.0f};
+
+            if (uniqueVertices.count(vertex) == 0) {
+                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+                vertices.push_back(vertex);
+            }
+
+            indices.push_back(uniqueVertices[vertex]);
+        }
+    }
+    return EngineError::Ok;
+}
 EngineError VulkanHandler::createDepthResources(){
     VkFormat depthFormat = findDepthFormat();
     VkImage depthImage;
@@ -592,7 +648,7 @@ static void createImage(uint32_t width, uint32_t height, VkFormat format, VkImag
 }
 EngineError VulkanHandler::createTextureImage() {
     int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load("D:/Personal/MLEngine/MLEngine/textures/statue.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load("D:/Personal/MLEngine/MLEngine/textures/viking_room.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
 
     if (!pixels) {
@@ -1040,7 +1096,7 @@ EngineError VulkanHandler::createCommandBuffers(){
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(s_state.commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(s_state.commandBuffers[i], s_state.indexBuffer.value(), 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(s_state.commandBuffers[i], s_state.indexBuffer.value(), 0, VK_INDEX_TYPE_UINT32);
 
         vkCmdBindDescriptorSets(s_state.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, s_state.pipelineLayout.value(), 0, 1, &s_state.descriptorSets[i], 0, nullptr);
 
