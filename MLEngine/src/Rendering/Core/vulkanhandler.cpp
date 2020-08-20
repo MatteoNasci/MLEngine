@@ -299,7 +299,7 @@ EngineError VulkanHandler::createSwapChainObjects(){
     createUniformBuffers();
     createDescriptorPool();
     createDescriptorSets();
-    createCommandBuffers(); //TODO: use this function in initialize to avoid duplicated code (check if anything breaks after)
+    createCommandBuffers();
 
     return EngineError::Ok;
 }
