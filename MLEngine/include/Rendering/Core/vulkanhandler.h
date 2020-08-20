@@ -2,6 +2,7 @@
 #define VULKANHANDLER_H
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -51,6 +52,9 @@ private: VulkanHandler() = delete;
     static EngineError createDescriptorPool();
     static EngineError createDescriptorSets();
     static EngineError createTextureImage();
+    static EngineError createTextureImageView();
+    static EngineError createTextureSampler();
+    static EngineError createDepthResources();
 
     static EngineError recreateSwapChain();
     static EngineError cleanupSwapChain();
