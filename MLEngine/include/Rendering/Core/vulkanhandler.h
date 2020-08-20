@@ -58,6 +58,7 @@ private: VulkanHandler() = delete;
     static EngineError createTextureSampler();
     static EngineError createDepthResources();
     static EngineError loadModel();
+    static EngineError createColorResources();
 
     static EngineError recreateSwapChain();
     static EngineError cleanupSwapChain();
