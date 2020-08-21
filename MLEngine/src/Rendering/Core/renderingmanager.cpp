@@ -6,7 +6,7 @@
 #include <Engine/Core/engineerrorhelper.h>
 #include <Hardware/connectionevent.h>
 #include <Input/input.h>//TODO: remove this and stuff like this include (Less dependance)
-#include <Rendering/Core/vulkanhandler.h>
+#include <Rendering/Core/Vulkan/vulkanhandler.h>
 
 #include <stack>
 #include <sstream>

@@ -147,7 +147,7 @@ private: RenderingManager();
     static void windowMaximizeCallback(GLFWwindow* window, int maximized);
     static void windowContentScaleCallback(GLFWwindow* window, float xscale, float yscale);
 private:
-    std::list<GLFWwindow*> m_windows;
+    std::list<GLFWwindow*> m_windows; //TODO: all windows should be associated with their own vulkan instance
     //TODO: use mutexes for non threadsafe ops if needed
     bool m_initialized;
     bool m_contextInitialized;
