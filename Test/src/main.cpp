@@ -40,6 +40,10 @@ int main(int argc, char** argv){  //TODO: check hoe much std::function impacts p
         context_data.vulkan_use_layers = true;
         context_data.vulkan_layers.push_back("VK_LAYER_KHRONOS_validation");
         context_data.vulkan_logical_device_extensions.push_back("VK_KHR_swapchain");
+        context_data.appName = "Ciao";
+        context_data.appVersionMajor = 1;
+        context_data.appVersionMinor = 0;
+        context_data.appRevision = 0;
         if(Engine::instance().renderingManager().addWindow("Ciao", 800, 500, MonitorHandle(), mle::WindowShareData(), window_hints, context_data) != EngineError::Ok){
             mle::Engine::instance().console().log("Failed to create a main window!", mle::Console::getHighestPriorityClassification());
         }

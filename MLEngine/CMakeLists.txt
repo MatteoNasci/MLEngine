@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 set(VCPKG_TARGET_TRIPLET "x64-windows-static")
 
 # set the project name
-project(MLEngine VERSION 1.0 DESCRIPTION "Simple game engine made by Matteo Lorenzo Nasci")
+project(MLEngine VERSION 1.0.0.0 DESCRIPTION "Simple game engine made by Matteo Lorenzo Nasci")
 
 if (NOT "$ENV{VULKAN_SDK}" STREQUAL "")
     set(VULKAN_SDK_ROOT "$ENV{VULKAN_SDK}" CACHE INTERNAL "Copied from environment variable")

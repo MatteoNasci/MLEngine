@@ -3,5 +3,8 @@
 
 #define MLEngine_VERSION_MAJOR @MLEngine_VERSION_MAJOR@
 #define MLEngine_VERSION_MINOR @MLEngine_VERSION_MINOR@
+#define MLEngine_VERSION_PATCH @MLEngine_VERSION_PATCH@
+#define MLEngine_VERSION_TWEAK @MLEngine_VERSION_TWEAK@
+#define MLengine_NAME ("@PROJECT_NAME@")
 
 #endif //MLENGINECONFIG_H_IN
